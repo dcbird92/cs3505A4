@@ -11,22 +11,22 @@
     this->quantity = amount;
   }
 
-  std::string getUPC const()
+std::string food_item::getUPC const()
   {
     return UPC;
   }
 
-  std::string getName()const
+  std::string food_item::getName()const
   {
     return name;
   }
 
-  int getLife()const
+  int food_item::getLife()const
   {
     return shelf_life;
   }
 
-  int getTotal()const
+  int food_item::getTotal()const
   {
     return quantity;
   }

@@ -4,7 +4,7 @@
 #include "warehouse.h"
 
 //adding a comment
- warehouse::warehouse(std::string warehouseName)
+{  warehouse::warehouse(std::string warehouseName)
   {
     this->name = warehouseName;
   }
@@ -37,7 +37,8 @@
   bool warehouse::contains(food_item product)
   {
 
- }
+  }
+};
 
 
 

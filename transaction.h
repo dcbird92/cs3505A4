@@ -3,7 +3,7 @@
 
 #include "warehouse.h"
 
-public class transaction
+class transaction
 {
   private:
    std::vector<food_item> foodList;

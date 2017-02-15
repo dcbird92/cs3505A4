@@ -6,7 +6,7 @@
 /* 
  *Class holding the information about the food items in the transactions.
 */
-public class food_item
+class food_item
 {
  private:
   std::string UPC;
@@ -15,12 +15,11 @@ public class food_item
   int quanity;
 
  public:
-
   food_item(std::string numberID, std::string nameID, int life, int amount);
- std:string getUPC()const{};
- std::string getName()const{};
- int getLife()const{};
- int getTotal()const{};
+  std::string getUPC()const;
+  std::string getName()const;
+  int getLife()const;
+  int getTotal()const;
 
 };
 
