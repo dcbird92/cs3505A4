@@ -19,7 +19,7 @@
   void warehouse::receive(food_item stock)
   {
     std::map<std::string, std::vector<food_item> >::iterator it = inventory.find(stock.getName());
-    it.second.push_back(stock);
+    it->second.push_back(stock);
 
   }
   

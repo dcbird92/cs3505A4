@@ -12,7 +12,7 @@ class food_item
   std::string UPC;
   std::string name;
   int shelf_life;
-  int quanity;
+  int quantity;
 
  public:
   food_item(std::string numberID, std::string nameID, int life, int amount);
