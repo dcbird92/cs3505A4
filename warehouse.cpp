@@ -3,6 +3,7 @@
 
 #include "warehouse.h"
 
+
 //adding a comment
  warehouse::warehouse(std::string warehouseName)
   {
@@ -19,8 +20,7 @@
   {
     std::map<std::string, std::vector<food_item> >::iterator it = inventory.find(stock.getName());
     it.second.push_back(stock);
-    //we changed this
-    
+
   }
   
   food_item warehouse::request(food_item sell)
@@ -36,7 +36,6 @@
 
   bool warehouse::contains(food_item product)
   {
-
   }
 
 
