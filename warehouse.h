@@ -10,11 +10,11 @@
  * Warehouse class that hold a list of food items with UPC keys.
  */
 
-public class warehouse
+class warehouse
 {
  private:
   std::string name;
-  std::map<std::string,std::vector<food_item>> inventory;
+  std::map<std::string,std::vector<food_item> > inventory;
   
  public:
   warehouse(std::string warehouseName);
