@@ -3,7 +3,7 @@
 
 #include "food_item.h"
 
-  food_item(std::string numberID std::string nameID, int life, int amount)
+food_item(std::string numberID, std::string nameID, int life, int amount)
   {
     this->UPC = numberID;
     this->name = nameID;
