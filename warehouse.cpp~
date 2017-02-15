@@ -1,0 +1,8 @@
+#ifndef WAREHOUSECPP
+#define WAREHOUSECPP
+
+#include "warehouse.h"
+
+
+
+#endif

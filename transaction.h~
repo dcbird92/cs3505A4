@@ -1,0 +1,13 @@
+#ifndef TRANSACTION
+#define TRANSACTION
+
+#include "warehouse.h"
+
+public class transaction
+{
+
+  private:
+
+};
+
+#endif
