@@ -2,6 +2,10 @@
 #define WAREHOUSECPP
 
 #include "warehouse.h"
+//
+//
+//
+//here is a comment
 {
 
   warehouse::warehouse(std::string warehouseName)
@@ -19,8 +23,6 @@
   {
     std::map<std::string, std::vector<food_item>>::iterator it = inventory.find(stock.getName());
     it.second.push_back(stock);
-    if(this->inventory!contain(stock)
-       this->inventory.insert(stock);
   }
   
   food_item warehouse::request(food_item sell)
@@ -36,7 +38,7 @@
 
   bool warehouse::contains(food_item product)
   {
-
+    
   }
 };
 
