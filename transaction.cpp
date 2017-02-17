@@ -46,12 +46,7 @@ void transaction::getTransactions(std::string file)
 	  warehouse ware(words[2]);
 	  warehouseMap.insert(std::pair<std::string, warehouse>(words[2], ware));
 	}
-      
-      typedef std::map< std::string, warehouse >::iterator outer_iterator;
-      for(outer_iterator outer = warehouseMap.begin() ; outer != warehouseMap.end() ; ++outer )
-	{
-	  std::cout << outer->first << std::endl;
-	}
+     
       
       /* for(it=words.begin(); it != words.end(); it++)
 	 {
@@ -61,6 +56,12 @@ void transaction::getTransactions(std::string file)
       */
        
     }
+      typedef std::map< std::string, warehouse >::iterator outer_iterator;
+      for(outer_iterator outer = warehouseMap.begin() ; outer != warehouseMap.end() ; ++outer )
+	{
+	  std::cout << outer->first << std::endl;
+	}
+      std::cout << warehouseMap.size() << std::endl;
 
 }
 
