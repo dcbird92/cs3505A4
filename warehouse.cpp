@@ -26,12 +26,6 @@
   food_item warehouse::request(food_item sell)
   {
     //Check if warehouse contains that item
-
-    //check if multiple groups of that item exists
-
-    //check if warehouse contains enough items to fulfill request
-    //if it does
-    //   Remove the item with the oldest expiration date
     //else
     //   Remove available items, ignore the rest
 
