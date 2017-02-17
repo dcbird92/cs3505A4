@@ -1,8 +1,5 @@
-#ifndef WAREHOUSECPP
-#define WAREHOUSECPP
 
 #include "warehouse.h"
-
 
 //adding a comment
  warehouse::warehouse(std::string warehouseName)
@@ -31,12 +28,11 @@
   {
     //Check if warehouse contains that item
 
-    //if multiple groups of that item exists, remove the one with the 
-    //oldest expiration date
+    //check if multiple groups of that item exists
 
     //check if warehouse contains enough items to fulfill request
     //if it does
-    //   Remove the item
+    //   Remove the item with the oldest expiration date
     //else
     //   Remove available items, ignore the rest
 
@@ -52,6 +48,3 @@
   {
   }
 
-
-
-#endif
