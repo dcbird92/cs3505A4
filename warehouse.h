@@ -1,7 +1,6 @@
 #ifndef WAREHOUSE
 #define WAREHOUSE
 
-#include <string>
 #include <map>
 #include <vector>
 #include "food_item.h"

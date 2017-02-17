@@ -7,12 +7,11 @@ class transaction
 {
   private:
    std::vector<food_item> foodList;
-   std::vector<warehouse> warehouseList;
+   std::map<std::string, warehouse> warehouseMap;
 
   public:
    transaction();
    void getTransactions(std::string file);
-   void acceptFile(std::string filename);
 };
 
 #endif

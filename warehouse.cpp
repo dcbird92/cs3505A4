@@ -1,4 +1,3 @@
-
 #include "warehouse.h"
 
 //adding a comment
