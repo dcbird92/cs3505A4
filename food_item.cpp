@@ -1,6 +1,3 @@
-#ifndef FOOD_ITEM2
-#define FOOD_ITEM2
-
 #include "food_item.h"
 
 food_item::food_item(std::string numberID, std::string nameID, int life, int amount)
@@ -30,4 +27,4 @@ int food_item::getTotal()const
   {
     return quantity;
   }
-#endif
+
