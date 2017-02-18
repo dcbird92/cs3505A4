@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
   int lifeTime = 5;
   int amount = 10;
 
-  food_item testing(UPCTest, nameTest, lifeTime, amount);
+  food_item testing(UPCTest, nameTest, lifeTime, amount,0);
   transaction trans;
   trans.getTransactions(argv[1]);
 }

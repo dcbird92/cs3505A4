@@ -13,13 +13,20 @@ class food_item
   std::string name;
   int shelf_life;
   int quantity;
+  int date;
 
  public:
-  food_item(std::string numberID, std::string nameID, int life, int amount);
+  food_item();
+  food_item(std::string numberID, std::string nameID, int life, int amount, int day);
+  food_item(const food_item &here);
   std::string getUPC()const;
   std::string getName()const;
   int getLife()const;
   int getTotal()const;
+  int setDate(int someDate);
+  void isBad();
+  void changeQuantity(int foodNum);
+  int getDate();
 
 };
 
