@@ -6,6 +6,13 @@
 #include <stdlib.h>
 #include <set>
 
+/*
+ * Assignment 4 2/17/2017
+ * Sean Hammond and Michael Sorger
+ * This class takes a text file of transactions with Food items 
+ * warehouses, request, received, day increments. This class uses helper classes
+ * food_item and warehouse. 
+ */
 //Declaration definitions
 
 transaction::transaction()
@@ -17,7 +24,7 @@ void transaction::getTransactions(std::string file)
   std::string line;
   std::ifstream infile(file.c_str());
   std::vector<std::string>::iterator it;
-  std::map<std::string, int> requestCount;
+  std::map<std::string, int> requestCount; // Used to calculate the most popular items
   while(std::getline(infile,line))
     {
       //Parse by whitespace, store words in vector
@@ -33,6 +40,7 @@ void transaction::getTransactions(std::string file)
       if(words[0] == "FoodItem")
 	{
 	  std::string name;
+	  // In the text file it the line starts with food item we know the 9th position of the line is the start of the name
 	  for (int count = 9; words[count] != words.back(); count++)
 	    {
 	      name = name + words[count] + " ";
@@ -41,7 +49,9 @@ void transaction::getTransactions(std::string file)
 	  char *y = const_cast<char *>(words[7].c_str()); //changes string to character array
 	  int shelflife = atoi(y); //converts character array to an int
 	  food_item food(words[4], name,shelflife,0,0);
+	  // inserting the new food item into the list
 	  foodList.insert(std::pair<std::string,food_item>(words[4],food));
+	  // adding the food item into the request counter
 	  requestCount.insert(std::pair<std::string,int>(words[4],0));
 	}     
  
@@ -50,12 +60,12 @@ void transaction::getTransactions(std::string file)
 	{
 	  //add new warehouses
 	  std::string name;
+	  // if the line starts with warehouse we know the position 2 is the start of the name
 	  for( int i = 2; i < words.size(); i ++)
 	    {
 	      name = name + words[i] + " ";
 	    }
-	  //std::cout << words.size() << std::endl;
-	  //name = name + words.back();
+	  // removes the new line character from the name
 	  name.erase(name.size() - 1);
 	  warehouse ware(name);
 	  warehouseMap.insert(std::pair<std::string, warehouse>(name, ware));
@@ -71,10 +81,12 @@ void transaction::getTransactions(std::string file)
 	  addFood.setDate(this->maindate);
 
 	  std::string name;
+	  // if the line started with receive we know the name position started on 3
 	  for(int i = 3; i < words.size(); i++)
 	    {
 	      name = name + words[i] + " ";
 	    }
+	  // removed new line character from the name
 	  name.erase(name.size() - 1);
 	  warehouseMap[name].receive(addFood);
 
@@ -87,21 +99,22 @@ void transaction::getTransactions(std::string file)
        else if(words[0] == "Request:")
 	 {
 	  
+	   // we know the UPC code was it position 1 of the line
 	  food_item subFood = foodList[words[1]];
 	  char *y = const_cast<char *>(words[2].c_str()); //changes string to character array
 	  int quantity = atoi(y); //stores quantity of items received
 	  subFood.changeQuantity(quantity);
 	  
 	  std::string name;
+	  // if the line started with request we know the name position started on 3
 	  for(int i = 3; i <  words.size(); i++)
 	    {
 	      name = name + words[i] + " ";
-	    }
-	  // name = name + words.back();
-	  name.erase(name.size() - 1);
+	    };
+	  name.erase(name.size() - 1); // removed the new line character from the name
 	  std::map<std::string, warehouse>::iterator wareit = warehouseMap.find(name);
 	  wareit->second.request(subFood);
-	  //warehouseMap[name].request(subFood);
+	  // calls the request method inside the warehouse
 	  std::map<std::string,int>::iterator reqit = requestCount.find(subFood.getUPC());
 	  reqit->second = reqit->second + 1;
 	 }
@@ -109,20 +122,19 @@ void transaction::getTransactions(std::string file)
       //first words are next day
        else if(words[0] == "Next")
 	 {
-	    std::cout << "Start of Next day" << std::endl;
 	   maindate = maindate + 1;
 	   std::map<std::string, warehouse>::iterator it;
 	   for(it = warehouseMap.begin(); it != warehouseMap.end(); it++)
 	     {
 	       it->second.update(maindate);
 	     }
-	   std::cout << "End of Next day" << std::endl;
 	 }
        else if(words[0] == "Start")
 	 {
 	   maindate = 0;
 	   continue;
 	 }
+      // if End stop checking the text file
        else if(words[0] == "End")
 	 {
 	   break;
@@ -188,34 +200,7 @@ void transaction::getTransactions(std::string file)
       food_iterator foodit = foodList.find(*setit);
       std::cout << foodit->second.getUPC() << " " << foodit->second.getName() << std::endl;
     }
-  /*
-  string max;
-  string mid;
-  string min;
-  for(count_iterator countit = requestCount.begin(); countit !=requestCount.end(); countit++)
-    {
-      
-    }
-  */
-
-   
  
-  /*  typedef std::map< std::string, warehouse >::iterator outer_iterator;
-      for(outer_iterator outer = warehouseMap.begin() ; outer != warehouseMap.end() ; ++outer )
-	{
-	  std::cout << outer->first << std::endl;
-	  std::cout << outer->first.size() << std::endl;
-	}
-      std::cout << warehouseMap.size() << std::endl; 
-  */
-      /*    typedef std::map< std::string, food_item >::iterator food_iterator;
-      for(food_iterator foodit = foodList.begin() ; foodit != foodList.end() ; ++foodit )
-	{
-	  std::cout << foodit->first << std::endl;
-	}
-       std::cout << foodList.size() << std::endl;
-      */
-  
-
+ 
 }
 
