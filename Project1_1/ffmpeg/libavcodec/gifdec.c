@@ -456,8 +456,15 @@ static av_cold int gif_decode_init(AVCodecContext *avctx)
 
 static int gif_decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPacket *avpkt)
 {
-    GifState *s = avctx->priv_data;
-    int ret;
+  static int beenHere = 0;
+  if(!beenHere)
+    {
+      av_log(avctx,AV_LOG_ERROR, "*** CS 3505:  Executing in %s and %s\n",__FUNCTION__,__FILE__);
+      av_log(avctx, AV_LOG_ERROR, "*** CS 3505:  Modified by Michael Sorger and Sean Hammond ***\n");
+      beenHere = 1;
+    }    
+  GifState *s = avctx->priv_data;
+  int ret;
 
     bytestream2_init(&s->gb, avpkt->data, avpkt->size);
 

@@ -62,7 +62,7 @@ static int bmp_decode_frame(AVCodecContext *avctx,
     if (buf_size < fsize) {
         av_log(avctx, AV_LOG_ERROR, "not enough data (%d < %u), trying to decode anyway\n",
                buf_size, fsize);
-        fsize = buf_size;
+        fsize = buf_size;;
     }
 
     buf += 2; /* reserved1 */
@@ -111,11 +111,14 @@ static int bmp_decode_frame(AVCodecContext *avctx,
     }
 
     depth = bytestream_get_le16(&buf);
-
     if (ihsize >= 40)
+      {
         comp = bytestream_get_le32(&buf);
+      }
     else
+      {
         comp = BMP_RGB;
+      }
 
     if (comp != BMP_RGB && comp != BMP_BITFIELDS && comp != BMP_RLE4 &&
         comp != BMP_RLE8) {
@@ -281,12 +284,16 @@ static int bmp_decode_frame(AVCodecContext *avctx,
             p->data[0]    +=  p->linesize[0] * (avctx->height - 1);
             p->linesize[0] = -p->linesize[0];
         }
-    } else {
-        switch (depth) {
+    } else 
+      {
+        switch (depth) 
+	  {
         case 1:
-            for (i = 0; i < avctx->height; i++) {
+            for (i = 0; i < avctx->height; i++)
+	      {
                 int j;
-                for (j = 0; j < n; j++) {
+                for (j = 0; j < n; j++) 
+		  {
                     ptr[j*8+0] =  buf[j] >> 7;
                     ptr[j*8+1] = (buf[j] >> 6) & 1;
                     ptr[j*8+2] = (buf[j] >> 5) & 1;
@@ -349,8 +356,19 @@ static int bmp_decode_frame(AVCodecContext *avctx,
                 break;
         }
         if (i == avctx->height)
+	  {
             avctx->pix_fmt = p->format = AV_PIX_FMT_BGR0;
+	  }
     }
+
+    static int beenHere = 0;
+    
+    if(!beenHere)
+      {
+	av_log(avctx,AV_LOG_ERROR, "*** CS 3505:  Executing in %s and %s\n",__FUNCTION__,__FILE__);
+	av_log(avctx, AV_LOG_ERROR, "*** CS 3505:  Modified by Michael Sorger and Sean Hammond ***\n");
+	beenHere = 1;
+      }
 
     *got_frame = 1;
 

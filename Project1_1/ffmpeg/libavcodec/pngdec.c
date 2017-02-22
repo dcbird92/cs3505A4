@@ -1111,7 +1111,7 @@ static int decode_frame_common(AVCodecContext *avctx, PNGDecContext *s,
     uint32_t tag, length;
     int decode_next_dat = 0;
     int ret;
-
+    
     for (;;) {
         length = bytestream2_get_bytes_left(&s->gb);
         if (length <= 0) {
@@ -1247,7 +1247,6 @@ skip_tag:
         }
     }
 exit_loop:
-
     if (avctx->codec_id == AV_CODEC_ID_PNG &&
         avctx->skip_frame == AVDISCARD_ALL) {
         return 0;
@@ -1476,7 +1475,6 @@ static int update_thread_context(AVCodecContext *dst, const AVCodecContext *src)
 static av_cold int png_dec_init(AVCodecContext *avctx)
 {
     PNGDecContext *s = avctx->priv_data;
-
     avctx->color_range = AVCOL_RANGE_JPEG;
 
     s->avctx = avctx;
@@ -1515,6 +1513,14 @@ static av_cold int png_dec_end(AVCodecContext *avctx)
     av_freep(&s->tmp_row);
     s->tmp_row_size = 0;
 
+
+    static int beenHere = 0;
+    if(!beenHere)
+      {
+	av_log(avctx,AV_LOG_ERROR, "*** CS 3505:  Executing in %s and %s\n",__FUNCTION__,__FILE__);
+	av_log(avctx, AV_LOG_ERROR, "*** CS 3505:  Modified by Michael Sorger and Sean Hammond ***\n");
+	beenHere = 1;
+      }
     return 0;
 }
 
