@@ -31,13 +31,13 @@ static int bmp_decode_frame(AVCodecContext *avctx,
                             void *data, int *got_frame,
                             AVPacket *avpkt)
 {
-    const uint8_t *buf = avpkt->data;
-    int buf_size       = avpkt->size;
-    AVFrame *p         = data;
-    unsigned int fsize, hsize;
-    int width, height;
-    unsigned int depth;
-    BiCompression comp;
+    const uint8_t *buf = avpkt->data; //8 bit unsigneed int, 0-255
+    int buf_size       = avpkt->size; //int
+    AVFrame *p         = data; //one frame from movie
+    unsigned int fsize, hsize; //file size, header size
+    int width, height; //width height of frame 
+    unsigned int depth; //depth? 
+    BiCompression comp; //
     unsigned int ihsize;
     int i, j, n, linesize, ret;
     uint32_t rgb[3] = {0};

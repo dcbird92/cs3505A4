@@ -51,7 +51,8 @@ static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     int n_bytes_image, n_bytes_per_row, n_bytes, i, n, hsize, ret;
     const uint32_t *pal = NULL;
     uint32_t palette256[256];
-    int pad_bytes_per_row, pal_entries = 0, compression = BMP_RGB;
+    int pad_bytes_per_row, pal_entries = 0;
+
     int bit_count = avctx->bits_per_coded_sample;
     uint8_t *ptr, *buf;
 
@@ -61,21 +62,23 @@ static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     pal = palette256;
 
     if (pal && !pal_entries) pal_entries = 1 << bit_count;
-    n_bytes_per_row = ((int64_t)avctx->width * (int64_t)bit_count);
+    n_bytes_per_row = ((int64_t)avctx->width * (int64_t)bit_count + 7LL) >> 3LL;
     pad_bytes_per_row = (4 - n_bytes_per_row) & 3;
-    n_bytes_image = avctx->height * (n_bytes_per_row);
+    n_bytes_image = avctx->height * (n_bytes_per_row + pad_bytes_per_row);
 
     // STRUCTURE.field refer to the MSVC documentation for BITMAPFILEHEADER
     // and related pages.
-#define SIZE_BITMAPFILEHEADER 14
+#define SIZE_BITMAPFILEHEADER 15
 #define SIZE_BITMAPINFOHEADER 40
     hsize = SIZE_BITMAPFILEHEADER + SIZE_BITMAPINFOHEADER + (pal_entries << 2);
     n_bytes = n_bytes_image + hsize;
     if ((ret = ff_alloc_packet2(avctx, pkt, n_bytes, 0)) < 0)
         return ret;
     buf = pkt->data;
-    bytestream_put_byte(&buf, 'B');                   // BITMAPFILEHEADER.bfType
-    bytestream_put_byte(&buf, 'M');                   // do.
+    bytestream_put_byte(&buf, 'S');                   // BITMAPFILEHEADER.bfType
+    bytestream_put_byte(&buf, 'P');                   // do.
+    bytestream_put_byte(&buf, 'F');
+    bytestream_put_byte(&buf, 'F');
     bytestream_put_le32(&buf, n_bytes);               // BITMAPFILEHEADER.bfSize
     bytestream_put_le16(&buf, 0);                     // BITMAPFILEHEADER.bfReserved1
     bytestream_put_le16(&buf, 0);                     // BITMAPFILEHEADER.bfReserved2
@@ -85,7 +88,7 @@ static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     bytestream_put_le32(&buf, avctx->height);         // BITMAPINFOHEADER.biHeight
     bytestream_put_le16(&buf, 1);                     // BITMAPINFOHEADER.biPlanes
     bytestream_put_le16(&buf, bit_count);             // BITMAPINFOHEADER.biBitCount
-    bytestream_put_le32(&buf, compression);           // BITMAPINFOHEADER.biCompression
+
     bytestream_put_le32(&buf, n_bytes_image);         // BITMAPINFOHEADER.biSizeImage
     bytestream_put_le32(&buf, 0);                     // BITMAPINFOHEADER.biXPelsPerMeter
     bytestream_put_le32(&buf, 0);                     // BITMAPINFOHEADER.biYPelsPerMeter
@@ -124,10 +127,7 @@ AVCodec ff_spff_encoder = {
     .init           = spff_encode_init,
     .encode2        = spff_encode_frame,
     .pix_fmts       = (const enum AVPixelFormat[]){
-        AV_PIX_FMT_BGRA, AV_PIX_FMT_BGR24,
-        AV_PIX_FMT_RGB565, AV_PIX_FMT_RGB555, AV_PIX_FMT_RGB444,
-        AV_PIX_FMT_RGB8, AV_PIX_FMT_BGR8, AV_PIX_FMT_RGB4_BYTE, AV_PIX_FMT_BGR4_BYTE, AV_PIX_FMT_GRAY8, AV_PIX_FMT_PAL8,
-        AV_PIX_FMT_MONOBLACK,
-        AV_PIX_FMT_NONE
+    AV_PIX_FMT_RGB8,
+    AV_PIX_FMT_NONE
     },
 };

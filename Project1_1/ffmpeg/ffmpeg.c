@@ -4589,14 +4589,14 @@ int main(int argc, char **argv)
 //         exit_program(1);
 //     }
     
-
+/*
     printf("==================================\n");
     //something fancy
     printf("Cs3505 Assignment Project1_1 checking for .bmp, .png, .gif!\n");
 
     int foundOne = 0;
     
-    /* Print input file names */
+    /* Print input file names
     for (i = 0; i < nb_input_files; i++)
       {
         InputFile *f = input_files[i];
@@ -4625,6 +4625,8 @@ int main(int argc, char **argv)
       }
     
     printf("==================================\n");
+
+*/
 
     for (i = 0; i < nb_output_files; i++) {
         if (strcmp(output_files[i]->ctx->oformat->name, "rtp"))
