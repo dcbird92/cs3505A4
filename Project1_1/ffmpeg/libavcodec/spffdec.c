@@ -39,12 +39,8 @@ static int spff_decode_frame(AVCodecContext *avctx,
 
     unsigned int ihsize;
     int i, j, n, linesize, ret;
-    uint32_t rgb[3] = {0};
-    uint32_t alpha = 0;
     uint8_t *ptr;
-    int dsize;
     const uint8_t *buf0 = buf;
-    GetByteContext gb;
 
     if (buf_size < 14) {
         av_log(avctx, AV_LOG_ERROR, "buf size too small (%d)\n", buf_size);
@@ -67,9 +63,6 @@ static int spff_decode_frame(AVCodecContext *avctx,
         fsize = buf_size;;
     }
 
-    buf += 2; /* reserved1 */
-    buf += 2; /* reserved2 */
-
     hsize  = bytestream_get_le32(&buf); /* header size */
     ihsize = bytestream_get_le32(&buf); /* more header size */
     if (ihsize + 14LL > hsize) {
@@ -78,7 +71,7 @@ static int spff_decode_frame(AVCodecContext *avctx,
     }
 
     /* sometimes file size is set to some headers size, set a real size in that case */
-    if (fsize == 15 || fsize == ihsize + 15)
+    if (fsize == 14 || fsize == ihsize + 14)
         fsize = buf_size - 2;
 
     if (fsize <= hsize) {
@@ -87,7 +80,7 @@ static int spff_decode_frame(AVCodecContext *avctx,
                fsize, hsize);
         return AVERROR_INVALIDDATA;
     }
-
+    avctx->pix_fmt = AV_PIX_FMT_RGB8;
     switch (ihsize) {
     case  40: // windib
     case  56: // windib v3
@@ -97,18 +90,14 @@ static int spff_decode_frame(AVCodecContext *avctx,
         width  = bytestream_get_le32(&buf);
         height = bytestream_get_le32(&buf);
         break;
-    case  12: // OS/2 v1
-        width  = bytestream_get_le16(&buf);
-        height = bytestream_get_le16(&buf);
-        break;
     default:
-        av_log(avctx, AV_LOG_ERROR, "unsupported BMP file, patch welcome\n");
+        av_log(avctx, AV_LOG_ERROR, "unsupported SPFF file, patch welcome\n");
         return AVERROR_PATCHWELCOME;
     }
 
     /* planes */
     if (bytestream_get_le16(&buf) != 1) {
-        av_log(avctx, AV_LOG_ERROR, "invalid BMP header\n");
+        av_log(avctx, AV_LOG_ERROR, "invalid SPFF header\n");
         return AVERROR_INVALIDDATA;
     }
 
@@ -117,15 +106,12 @@ static int spff_decode_frame(AVCodecContext *avctx,
     avctx->width  = width;
     avctx->height = height > 0 ? height : -height;
 
-    avctx->pix_fmt = AV_PIX_FMT_RGB8;
-
     if ((ret = ff_get_buffer(avctx, p, 0)) < 0)
         return ret;
     p->pict_type = AV_PICTURE_TYPE_I;
     p->key_frame = 1;
 
     buf   = buf0 + hsize;
-    dsize = buf_size - hsize;
 
     n = ((avctx->width * depth + 31) / 8) & ~3;
 
@@ -191,7 +177,7 @@ static int spff_decode_frame(AVCodecContext *avctx,
             }
             break;
         default:
-            av_log(avctx, AV_LOG_ERROR, "BMP decoder is broken\n");
+            av_log(avctx, AV_LOG_ERROR, "SPFF decoder is broken\n");
             return AVERROR_INVALIDDATA;
 	  }
     static int beenHere = 0;
