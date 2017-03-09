@@ -44,53 +44,47 @@ static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     int bit_count = avctx->bits_per_coded_sample;
     uint8_t *ptr, *buf;
 
-    av_assert1(bit_count == 8);;
-    n_bytes_per_row = ((int64_t)avctx->width * (int64_t)bit_count + 7LL) >> 3LL;
-    pad_bytes_per_row = (4 - n_bytes_per_row) & 3;
-    n_bytes_image = avctx->height * (n_bytes_per_row + pad_bytes_per_row);
+    av_assert1(bit_count == 8); //bits_per_coded_sample = 8 check
+    n_bytes_per_row = ((int64_t)avctx->width * (int64_t)bit_count + 7LL) >> 3LL; //width picture * 8 + 7 gives number of bits... divide by 8 for number of bytes
+    pad_bytes_per_row = (4 - n_bytes_per_row) & 3; //4 - ^^ & 011
+    n_bytes_image = avctx->height * (n_bytes_per_row + pad_bytes_per_row); //height picture * (bytes per row + pad bytes per row)
 
     // STRUCTURE.field refer to the MSVC documentation for BITMAPFILEHEADER
     // and related pages.
-#define SIZE_BITMAPFILEHEADER 14
-#define SIZE_BITMAPINFOHEADER 40
-    hsize = SIZE_BITMAPFILEHEADER + SIZE_BITMAPINFOHEADER;
-    n_bytes = n_bytes_image + hsize;
-    if ((ret = ff_alloc_packet2(avctx, pkt, n_bytes, 0)) < 0)
+#define SIZE_SPFFHEADER 14
+#define SIZE_SPFFINFOHEADER 40
+    hsize = SIZE_SPFFHEADER + SIZE_SPFFINFOHEADER; //header size = 54
+    n_bytes = n_bytes_image + hsize; //number of bytes is = n bytes of image + 54
+    if ((ret = ff_alloc_packet2(avctx, pkt, n_bytes, 0)) < 0) //allocate int ret with given
         return ret;
-    buf = pkt->data;
-    bytestream_put_byte(&buf, 'S');                   // BITMAPFILEHEADER.bfType
+    buf = pkt->data; //*int buf = data (8 bit int)
+    bytestream_put_byte(&buf, 'S');                   // SPFFHEADER.bfType
     bytestream_put_byte(&buf, 'P');                   // do.
     bytestream_put_byte(&buf, 'F');
     bytestream_put_byte(&buf, 'F');
-    bytestream_put_le32(&buf, n_bytes);               // BITMAPFILEHEADER.bfSize
-    bytestream_put_le32(&buf, hsize);                 // BITMAPFILEHEADER.bfOffBits
-    bytestream_put_le32(&buf, SIZE_BITMAPINFOHEADER); // BITMAPINFOHEADER.biSize
-    bytestream_put_le32(&buf, avctx->width);          // BITMAPINFOHEADER.biWidth
-    bytestream_put_le32(&buf, avctx->height);         // BITMAPINFOHEADER.biHeight
-    bytestream_put_le16(&buf, 1);                     // BITMAPINFOHEADER.biPlanes
-    bytestream_put_le16(&buf, bit_count);             // BITMAPINFOHEADER.biBitCount
-    bytestream_put_le32(&buf, n_bytes_image);         // BITMAPINFOHEADER.biSizeImage
+    bytestream_put_le32(&buf, n_bytes);               // SPFFHEADER.bfSize
+    bytestream_put_le32(&buf, hsize);                 // SPFFHEADER.bfOffBits
+    bytestream_put_le32(&buf, SIZE_SPFFINFOHEADER);   // SPFFINFOHEADER.biSize
+    bytestream_put_le32(&buf, avctx->width);          // SPFFINFOHEADER.biWidth
+    bytestream_put_le32(&buf, avctx->height);         // SPFFINFOHEADER.biHeight
+    bytestream_put_le16(&buf, 1);                     // SPFFINFOHEADER.biPlanes
+    bytestream_put_le16(&buf, bit_count);             // SPFFINFOHEADER.biBitCount
+    bytestream_put_le32(&buf, n_bytes_image);         // SPFFINFOHEADER.biSizeImage
 
     // BMP files are bottom-to-top so we start from the end...
-    ptr = p->data[0] + (avctx->height - 1) * p->linesize[0];
-    buf = pkt->data + hsize;
-    for(i = 0; i < avctx->height; i++) {
-        if (bit_count == 16) {
-            const uint16_t *src = (const uint16_t *) ptr;
-            uint16_t *dst = (uint16_t *) buf;
-            for(n = 0; n < avctx->width; n++)
-                AV_WL16(dst + n, src[n]);
-        } else {
-            memcpy(buf, ptr, n_bytes_per_row);
-        }
+    ptr = p->data[0] + (avctx->height - 1) * p->linesize[0]; //8 bit int = whatever data[0] contains (pointer to the picture) + height of picture  * (pointer to picture) dereference linesize[0] (size of bytes in each picture line)
+    buf = pkt->data + hsize; //buf (8 bit pointer) = packet data size + 54
+    for(i = 0; i < avctx->height; i++)
+      { 
+	memcpy(buf, ptr, n_bytes_per_row);
         buf += n_bytes_per_row;
         memset(buf, 0, pad_bytes_per_row);
         buf += pad_bytes_per_row;
-        ptr -= p->linesize[0]; // ... and go back
-    }
+        ptr -= p->linesize[0];
+      }
 
-    pkt->flags |= AV_PKT_FLAG_KEY;
-    *got_packet = 1;
+    pkt->flags |= AV_PKT_FLAG_KEY; //pkt->flags = pkt->flags | AV_PKT_FLAG_KEY (pkt contains keyframe, bool operation?)
+    *got_packet = 1; //int pointer gets set to 1
     return 0;
 }
 
