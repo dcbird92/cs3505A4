@@ -1,3 +1,6 @@
+/* Michael Sorger and Sean Hammond
+ */
+
 #ifndef AVCODEC_SPFF_H
 #define AVCODEC_SPFF_H
 
