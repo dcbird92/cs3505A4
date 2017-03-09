@@ -34,56 +34,56 @@ static av_cold int spff_encode_init(AVCodecContext *avctx)
   return 0;
 }
 
-static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
+static int spff_encode_frame(AVCodecContext *avctx, AVPacket *AVpkt,
                             const AVFrame *pict, int *got_packet)
 {
-    const AVFrame * const p = pict;
-    int n_bytes_image, n_bytes_per_row, n_bytes, hsize, ret;
+    const AVFrame * const pointerToPicture = pict;
+    int n_bytes_image, n_bytes_per_row, n_bytes, headerSize, retInt;
     int pad_bytes_per_row = 0;
     int i;
     int bit_count = avctx->bits_per_coded_sample;
-    uint8_t *ptr, *buf;
+    uint8_t *dataPtr, *dataBuffer;
 
     av_assert1(bit_count == 8); //bits_per_coded_sample = 8 check
-    n_bytes_per_row = ((int64_t)avctx->width * (int64_t)bit_count + 7LL) >> 3LL; //width picture * 8 + 7 gives number of bits... divide by 8 for number of bytes
-    pad_bytes_per_row = (4 - n_bytes_per_row) & 3; //4 - ^^ & 011
-    n_bytes_image = avctx->height * (n_bytes_per_row + pad_bytes_per_row); //height picture * (bytes per row + pad bytes per row)
+    n_bytes_per_row = ((int64_t)avctx->width * (int64_t)bit_count + 7LL)/8; //find number of bytes per row
+    pad_bytes_per_row = (4 - n_bytes_per_row) & 3; //find number of pad bytes per row (max is 3 bytes)
+    n_bytes_image = avctx->height * (n_bytes_per_row + pad_bytes_per_row); //find number of bytes for the image
 
     // STRUCTURE for SPFFFILEHEADER
     // and related pages.
 #define SIZE_SPFFHEADER 14
 #define SIZE_SPFFINFOHEADER 40
-    hsize = SIZE_SPFFHEADER + SIZE_SPFFINFOHEADER; //header size = 54
-    n_bytes = n_bytes_image + hsize; //number of bytes is = n bytes of image + 54
-    if ((ret = ff_alloc_packet2(avctx, pkt, n_bytes, 0)) < 0) //allocate int ret with given
-        return ret;
-    buf = pkt->data; //*int buf = data (8 bit int)
-    bytestream_put_byte(&buf, 'S');                   // SPFFHEADER.bfType
-    bytestream_put_byte(&buf, 'P');                   // do.
-    bytestream_put_byte(&buf, 'F');
-    bytestream_put_byte(&buf, 'F');
-    bytestream_put_le32(&buf, n_bytes);               // SPFFHEADER.bfSize
-    bytestream_put_le32(&buf, hsize);                 // SPFFHEADER.bfOffBits
-    bytestream_put_le32(&buf, SIZE_SPFFINFOHEADER);   // SPFFINFOHEADER.biSize
-    bytestream_put_le32(&buf, avctx->width);          // SPFFINFOHEADER.biWidth
-    bytestream_put_le32(&buf, avctx->height);         // SPFFINFOHEADER.biHeight
-    bytestream_put_le16(&buf, 1);                     // SPFFINFOHEADER.biPlanes
-    bytestream_put_le16(&buf, bit_count);             // SPFFINFOHEADER.biBitCount
-    bytestream_put_le32(&buf, n_bytes_image);         // SPFFINFOHEADER.biSizeImage
+    headerSize = SIZE_SPFFHEADER + SIZE_SPFFINFOHEADER; //calculate headerSize
+    n_bytes = n_bytes_image + headerSize; //sum of bytes of image and headerSize
+    if ((retInt = ff_alloc_packet2(avctx, AVpkt, n_bytes, 0)) < 0) //allocate data using AVpkt
+        return retInt;
+    dataBuffer = AVpkt->data; //*int buf = data (8 bit int)
+    bytestream_put_byte(&dataBuffer, 'S');                   // SPFFHEADER.bfType
+    bytestream_put_byte(&dataBuffer, 'P');                   // do.
+    bytestream_put_byte(&dataBuffer, 'F');
+    bytestream_put_byte(&dataBuffer, 'F');
+    bytestream_put_le32(&dataBuffer, n_bytes);               // SPFFHEADER.bfSize
+    bytestream_put_le32(&dataBuffer, headerSize);            // SPFFHEADER.bfOffBits
+    bytestream_put_le32(&dataBuffer, SIZE_SPFFINFOHEADER);   // SPFFINFOHEADER.biSize
+    bytestream_put_le32(&dataBuffer, avctx->width);          // SPFFINFOHEADER.biWidth
+    bytestream_put_le32(&dataBuffer, avctx->height);         // SPFFINFOHEADER.biHeight
+    bytestream_put_le16(&dataBuffer, 1);                     // SPFFINFOHEADER.biPlanes
+    bytestream_put_le16(&dataBuffer, bit_count);             // SPFFINFOHEADER.biBitCount
+    bytestream_put_le32(&dataBuffer, n_bytes_image);         // SPFFINFOHEADER.biSizeImage
 
     // SPFF files are currently bottom-to-top so we start from the end...
-    ptr = p->data[0] + (avctx->height - 1) * p->linesize[0]; //set pointer to byte line at the bottom of picture 
-    buf = pkt->data + hsize; //buf (8 bit pointer) = packet data size + 54
-    for(i = 0; i < avctx->height; i++)   //for the entire height of the image (749 pixels for us)
+    dataPtr = pointerToPicture->data[0] + (avctx->height - 1) * pointerToPicture->linesize[0]; //set pointer to byte line at the bottom of picture 
+    dataBuffer = AVpkt->data + headerSize; //set the dataBuffer to AVpacket's data + headersize
+    for(i = 0; i < avctx->height; i++) 
       { 
-	memcpy(buf, ptr, n_bytes_per_row); //copies buf (8 bit pointer int), pointer, "" ...??
-        buf += n_bytes_per_row; //buf adds number of bytes to itself
-        memset(buf, 0, pad_bytes_per_row); //fill block in memory with the buffer (int), 0, 
-        buf += pad_bytes_per_row; //add the buffer's number buffer
-        ptr -= p->linesize[0]; //assign the pointer to location to be picture pointer linesize - 1
+	memcpy(dataBuffer, dataPtr, n_bytes_per_row); //copies dataBuffer, dataPtr, and bytes per row into memory
+        dataBuffer += n_bytes_per_row; //dataBuffer increments for next pass
+        memset(dataBuffer, 0, pad_bytes_per_row); //fill block in memory with the dataBuffer and pad 
+        dataBuffer += pad_bytes_per_row; //dataBuffer adds the pad at the end for next pass
+        dataPtr -= pointerToPicture->linesize[0]; //assign the pointer to location to be picture pointer linesize - 1
       }
 
-    pkt->flags |= AV_PKT_FLAG_KEY; //pkt->flags = pkt->flags | AV_PKT_FLAG_KEY (pkt contains keyframe, bool operation)
+    AVpkt->flags |= AV_PKT_FLAG_KEY; //pkt->flags = pkt->flags | AV_PKT_FLAG_KEY (pkt contains keyframe, bool operation)
     *got_packet = 1; //int pointer gets set to 1
     return 0;
 }

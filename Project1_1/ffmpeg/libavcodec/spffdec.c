@@ -1,5 +1,6 @@
 /*
- * BMP image format decoder
+ * Michael Sorger and Sean Hammond
+ * SPFF image format decoder
  * Copyright (c) 2005 Mans Rullgard
  *
  * This file is part of FFmpeg.
@@ -30,104 +31,123 @@ static int spff_decode_frame(AVCodecContext *avctx,
                             void *data, int *got_frame,
                             AVPacket *avpkt)
 {
-    const uint8_t *buf = avpkt->data; //buf is an int pointer to av packet data
-    int buf_size       = avpkt->size; // buf_size points to size of packet data
-    AVFrame *p         = data; //points to frame data
-    unsigned int fsize, hsize; //file size, header size
+    const uint8_t *avpktBufPtr = avpkt->data; //int buffer that points to avpktdata
+    int buf_size  = avpkt->size; //size of packet data
+    AVFrame *framePointer = data; //points to frame data
+    unsigned int fileSize, headerSize;
     int width, height; //width and height of image
-    unsigned int depth; 
+    unsigned int depth; //the '8' in RGB8 
 
-    unsigned int ihsize; //info header size
-    int i, j, n, linesize, ret; 
-    uint8_t *ptr;
-    const uint8_t *buf0 = buf;
+    unsigned int infoHeaderSize;
+    int i, n, linesize, retInt; 
+    uint8_t *smallUIntPointer;
+    const uint8_t *bufPtrCopy = avpktBufPtr;
 
-    //packet data is too small
-    if (buf_size < 14) {
+    static int beenHere = 0;
+
+    //size packet is too small
+    if (buf_size < 14) 
+      {
         av_log(avctx, AV_LOG_ERROR, "buf size too small (%d)\n", buf_size);
         return AVERROR_INVALIDDATA;
-    }
+      }
 
     //if beginning of buffer does not have these
-    if (bytestream_get_byte(&buf) != 'S' ||
-        bytestream_get_byte(&buf) != 'P' ||
-	bytestream_get_byte(&buf) != 'F' ||
-	bytestream_get_byte(&buf) != 'F')
+    if (bytestream_get_byte(&avpktBufPtr) != 'S' ||
+        bytestream_get_byte(&avpktBufPtr) != 'P' ||
+	bytestream_get_byte(&avpktBufPtr) != 'F' ||
+	bytestream_get_byte(&avpktBufPtr) != 'F')
       {
         av_log(avctx, AV_LOG_ERROR, "bad magic number\n");
         return AVERROR_INVALIDDATA;
       }
 
     //assigns file size to be info given from buffer, checks if all buffer info exists
-    fsize = bytestream_get_le32(&buf);
-    if (buf_size < fsize) {
+    fileSize = bytestream_get_le32(&avpktBufPtr);
+    if (buf_size < fileSize)
+      {
         av_log(avctx, AV_LOG_ERROR, "not enough data (%d < %u), trying to decode anyway\n",
-               buf_size, fsize);
-        fsize = buf_size;;
-    }
+               buf_size, fileSize);
+        fileSize = buf_size;;
+      }
 
-    //assigns header/infor  to be information of buffer and checks to see if theres a difference
-    hsize  = bytestream_get_le32(&buf); /* header size */
-    ihsize = bytestream_get_le32(&buf); /* more header size */
-    if (ihsize + 14LL > hsize) {
-        av_log(avctx, AV_LOG_ERROR, "invalid header size %u\n", hsize);
+    //assigns header/info size to be information of buffer and checks to see if theres a difference
+    headerSize  = bytestream_get_le32(&avpktBufPtr); /* header size */
+    infoHeaderSize = bytestream_get_le32(&avpktBufPtr); /* more header size */
+    if (infoHeaderSize + 14LL > headerSize) 
+      {
+        av_log(avctx, AV_LOG_ERROR, "invalid header size %u\n", headerSize);
         return AVERROR_INVALIDDATA;
-    }
+      }
 
     /* sometimes file size is set to some headers size, set a real size in that case */
-    if (fsize == 14 || fsize == ihsize + 14)
-        fsize = buf_size - 2;
+    if (fileSize == 14 || fileSize == infoHeaderSize + 14)
+        fileSize = buf_size - 2;
 
-    if (fsize <= hsize) {
+    if (fileSize <= headerSize)
+      {
         av_log(avctx, AV_LOG_ERROR,
                "Declared file size is less than header size (%u < %u)\n",
-               fsize, hsize);
+               fileSize, headerSize);
         return AVERROR_INVALIDDATA;
-    }
+      }
+
+    //set AVCodecContext pixel format to be RGB8 
     avctx->pix_fmt = AV_PIX_FMT_RGB8;
 
-    //ihsize = 40
-    width  = bytestream_get_le32(&buf);
-    height = bytestream_get_le32(&buf);
+    //infoHeaderSize = 40
+    width  = bytestream_get_le32(&avpktBufPtr);
+    height = bytestream_get_le32(&avpktBufPtr);
 
 
     /* planes */
-    if (bytestream_get_le16(&buf) != 1) {
+    if (bytestream_get_le16(&avpktBufPtr) != 1) {
         av_log(avctx, AV_LOG_ERROR, "invalid SPFF header\n");
         return AVERROR_INVALIDDATA;
     }
 
-    depth = bytestream_get_le16(&buf); //8
+    depth = bytestream_get_le16(&avpktBufPtr); //8
 
+    //set height and width of picture
     avctx->width  = width;
     avctx->height = height > 0 ? height : -height;
 
-    if ((ret = ff_get_buffer(avctx, p, 0)) < 0)
-        return ret;
-    p->pict_type = AV_PICTURE_TYPE_I;
-    p->key_frame = 1;
+    //check if the picture's buffer is less than 0
+    if ((retInt = ff_get_buffer(avctx, framePointer, 0)) < 0)
+        return retInt;
 
-    buf   = buf0 + hsize;
+    //dereference frame's attributes to assign 
+    framePointer->pict_type = AV_PICTURE_TYPE_I;
+    framePointer->key_frame = 1;
 
+    //assign bufferPointer to be bufferPointerCopy + headerSize
+    avpktBufPtr = bufPtrCopy + headerSize;
+
+    //assign n to be bytes per row
     n = ((avctx->width * depth + 31) / 8) & ~3;
 
-    if (height > 0) {
-        ptr      = p->data[0] + (avctx->height - 1) * p->linesize[0];
-        linesize = -p->linesize[0];
-    } else {
-        ptr      = p->data[0];
-        linesize = p->linesize[0];
-    }
+    //assignt small Pointer to start at last row of image
+    if (height > 0) 
+      {
+        smallUIntPointer = framePointer->data[0] + (avctx->height - 1) * framePointer->linesize[0];
+        linesize = -framePointer->linesize[0];
+      } 
+    //otherwise, it is the last row, start there
+    else 
+      {
+        smallUIntPointer = framePointer->data[0];
+        linesize = framePointer->linesize[0];
+      }
 
-            for (i = 0; i < avctx->height; i++)
-	      {
-                memcpy(ptr, buf, n);
-                buf += n;
-                ptr += linesize;
-	      }
+    //copy each line into memory
+    for (i = 0; i < avctx->height; i++)
+      {
+	memcpy(smallUIntPointer, avpktBufPtr, n);
+	avpktBufPtr += n;
+	smallUIntPointer += linesize;
+      }
 
-    static int beenHere = 0;
-    
+    //was spffdec.c ran?
     if(!beenHere)
       {
 	av_log(avctx,AV_LOG_ERROR, "*** CS 3505:  Executing in %s and %s\n",__FUNCTION__,__FILE__);
