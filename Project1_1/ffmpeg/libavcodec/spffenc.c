@@ -40,7 +40,7 @@ static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     const AVFrame * const p = pict;
     int n_bytes_image, n_bytes_per_row, n_bytes, hsize, ret;
     int pad_bytes_per_row = 0;
-    int i, j, n;
+    int i;
     int bit_count = avctx->bits_per_coded_sample;
     uint8_t *ptr, *buf;
 
@@ -49,7 +49,7 @@ static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     pad_bytes_per_row = (4 - n_bytes_per_row) & 3; //4 - ^^ & 011
     n_bytes_image = avctx->height * (n_bytes_per_row + pad_bytes_per_row); //height picture * (bytes per row + pad bytes per row)
 
-    // STRUCTURE.field refer to the MSVC documentation for BITMAPFILEHEADER
+    // STRUCTURE for SPFFFILEHEADER
     // and related pages.
 #define SIZE_SPFFHEADER 14
 #define SIZE_SPFFINFOHEADER 40
@@ -71,19 +71,19 @@ static int spff_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     bytestream_put_le16(&buf, bit_count);             // SPFFINFOHEADER.biBitCount
     bytestream_put_le32(&buf, n_bytes_image);         // SPFFINFOHEADER.biSizeImage
 
-    // BMP files are bottom-to-top so we start from the end...
-    ptr = p->data[0] + (avctx->height - 1) * p->linesize[0]; //8 bit int = whatever data[0] contains (pointer to the picture) + height of picture  * (pointer to picture) dereference linesize[0] (size of bytes in each picture line)
+    // SPFF files are currently bottom-to-top so we start from the end...
+    ptr = p->data[0] + (avctx->height - 1) * p->linesize[0]; //set pointer to byte line at the bottom of picture 
     buf = pkt->data + hsize; //buf (8 bit pointer) = packet data size + 54
-    for(i = 0; i < avctx->height; i++)
+    for(i = 0; i < avctx->height; i++)   //for the entire height of the image (749 pixels for us)
       { 
-	memcpy(buf, ptr, n_bytes_per_row);
-        buf += n_bytes_per_row;
-        memset(buf, 0, pad_bytes_per_row);
-        buf += pad_bytes_per_row;
-        ptr -= p->linesize[0];
+	memcpy(buf, ptr, n_bytes_per_row); //copies buf (8 bit pointer int), pointer, "" ...??
+        buf += n_bytes_per_row; //buf adds number of bytes to itself
+        memset(buf, 0, pad_bytes_per_row); //fill block in memory with the buffer (int), 0, 
+        buf += pad_bytes_per_row; //add the buffer's number buffer
+        ptr -= p->linesize[0]; //assign the pointer to location to be picture pointer linesize - 1
       }
 
-    pkt->flags |= AV_PKT_FLAG_KEY; //pkt->flags = pkt->flags | AV_PKT_FLAG_KEY (pkt contains keyframe, bool operation?)
+    pkt->flags |= AV_PKT_FLAG_KEY; //pkt->flags = pkt->flags | AV_PKT_FLAG_KEY (pkt contains keyframe, bool operation)
     *got_packet = 1; //int pointer gets set to 1
     return 0;
 }

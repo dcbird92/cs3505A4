@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include <stdio.h>
 #include <inttypes.h>
 #include "avcodec.h"
 #include "bytestream.h"
@@ -30,23 +31,25 @@ static int spff_decode_frame(AVCodecContext *avctx,
                             void *data, int *got_frame,
                             AVPacket *avpkt)
 {
-    const uint8_t *buf = avpkt->data;
-    int buf_size       = avpkt->size;
-    AVFrame *p         = data;
-    unsigned int fsize, hsize;
-    int width, height;
-    unsigned int depth;
+    const uint8_t *buf = avpkt->data; //buf is an int pointer to av packet data
+    int buf_size       = avpkt->size; // buf_size points to size of packet data
+    AVFrame *p         = data; //points to frame data
+    unsigned int fsize, hsize; //file size, header size
+    int width, height; //width and height of image
+    unsigned int depth; 
 
-    unsigned int ihsize;
-    int i, j, n, linesize, ret;
+    unsigned int ihsize; //info header size
+    int i, j, n, linesize, ret; 
     uint8_t *ptr;
     const uint8_t *buf0 = buf;
 
+    //packet data is too small
     if (buf_size < 14) {
         av_log(avctx, AV_LOG_ERROR, "buf size too small (%d)\n", buf_size);
         return AVERROR_INVALIDDATA;
     }
 
+    //if beginning of buffer does not have these
     if (bytestream_get_byte(&buf) != 'S' ||
         bytestream_get_byte(&buf) != 'P' ||
 	bytestream_get_byte(&buf) != 'F' ||
@@ -56,6 +59,7 @@ static int spff_decode_frame(AVCodecContext *avctx,
         return AVERROR_INVALIDDATA;
       }
 
+    //assigns file size to be info given from buffer, checks if all buffer info exists
     fsize = bytestream_get_le32(&buf);
     if (buf_size < fsize) {
         av_log(avctx, AV_LOG_ERROR, "not enough data (%d < %u), trying to decode anyway\n",
@@ -63,6 +67,7 @@ static int spff_decode_frame(AVCodecContext *avctx,
         fsize = buf_size;;
     }
 
+    //assigns header/infor  to be information of buffer and checks to see if theres a difference
     hsize  = bytestream_get_le32(&buf); /* header size */
     ihsize = bytestream_get_le32(&buf); /* more header size */
     if (ihsize + 14LL > hsize) {
@@ -81,19 +86,11 @@ static int spff_decode_frame(AVCodecContext *avctx,
         return AVERROR_INVALIDDATA;
     }
     avctx->pix_fmt = AV_PIX_FMT_RGB8;
-    switch (ihsize) {
-    case  40: // windib
-    case  56: // windib v3
-    case  64: // OS/2 v2
-    case 108: // windib v4
-    case 124: // windib v5
-        width  = bytestream_get_le32(&buf);
-        height = bytestream_get_le32(&buf);
-        break;
-    default:
-        av_log(avctx, AV_LOG_ERROR, "unsupported SPFF file, patch welcome\n");
-        return AVERROR_PATCHWELCOME;
-    }
+
+    //ihsize = 40
+    width  = bytestream_get_le32(&buf);
+    height = bytestream_get_le32(&buf);
+
 
     /* planes */
     if (bytestream_get_le16(&buf) != 1) {
@@ -101,7 +98,7 @@ static int spff_decode_frame(AVCodecContext *avctx,
         return AVERROR_INVALIDDATA;
     }
 
-    depth = bytestream_get_le16(&buf);
+    depth = bytestream_get_le16(&buf); //8
 
     avctx->width  = width;
     avctx->height = height > 0 ? height : -height;
@@ -123,63 +120,13 @@ static int spff_decode_frame(AVCodecContext *avctx,
         linesize = p->linesize[0];
     }
 
-        switch (depth) 
-	  {
-        case 1:
             for (i = 0; i < avctx->height; i++)
 	      {
-                int j;
-                for (j = 0; j < n; j++) 
-		  {
-                    ptr[j*8+0] =  buf[j] >> 7;
-                    ptr[j*8+1] = (buf[j] >> 6) & 1;
-                    ptr[j*8+2] = (buf[j] >> 5) & 1;
-                    ptr[j*8+3] = (buf[j] >> 4) & 1;
-                    ptr[j*8+4] = (buf[j] >> 3) & 1;
-                    ptr[j*8+5] = (buf[j] >> 2) & 1;
-                    ptr[j*8+6] = (buf[j] >> 1) & 1;
-                    ptr[j*8+7] =  buf[j]       & 1;
-                }
-                buf += n;
-                ptr += linesize;
-            }
-            break;
-        case 8:
-        case 24:
-        case 32:
-            for (i = 0; i < avctx->height; i++) {
                 memcpy(ptr, buf, n);
                 buf += n;
                 ptr += linesize;
-            }
-            break;
-        case 4:
-            for (i = 0; i < avctx->height; i++) {
-                int j;
-                for (j = 0; j < n; j++) {
-                    ptr[j*2+0] = (buf[j] >> 4) & 0xF;
-                    ptr[j*2+1] = buf[j] & 0xF;
-                }
-                buf += n;
-                ptr += linesize;
-            }
-            break;
-        case 16:
-            for (i = 0; i < avctx->height; i++) {
-                const uint16_t *src = (const uint16_t *) buf;
-                uint16_t *dst       = (uint16_t *) ptr;
+	      }
 
-                for (j = 0; j < avctx->width; j++)
-                    *dst++ = av_le2ne16(*src++);
-
-                buf += n;
-                ptr += linesize;
-            }
-            break;
-        default:
-            av_log(avctx, AV_LOG_ERROR, "SPFF decoder is broken\n");
-            return AVERROR_INVALIDDATA;
-	  }
     static int beenHere = 0;
     
     if(!beenHere)
