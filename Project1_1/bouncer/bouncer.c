@@ -136,6 +136,33 @@ int main(int argc, char *argv[])
 			   
 
     }
+  // AVCodec* avcodec_find_encoder_by_name(AV_CODEC_ID_SPFF);
+
+  AVCodec *spffCodec = avcodec_find_encoder_by_name(AV_CODEC_ID_SPFF);
+  if(!spffCodec)
+    return -1;
   
+  AVCodecContext *spffContext = avcodec_alloc_context3(spffCodec);
+  if(!spffContext)
+    return -1;
+  spffContext->pix_fmt = vFrameRGB->pix_fmt;
+  spffContext->height = vFrameRGB->height;
+  spffContext->width = vFrameRGB->width;
+
+  avcodec_send_frame(spffContext, vFrameRGB);
+
+  avcodec_recieve_packet(spffContext, &imgPack);
+
+  
+  /* 
+  A visual reminder of what is declared
+
+ AVPacket imgPack;
+  AVFormatContext *inContext;
+  AVCodecContext *imgCodex;
+  AVCodec *vCodec;
+  AVFrame *vFrame;
+  AVFrame *vFrameRGB;
+  */
   return 0;
 }
