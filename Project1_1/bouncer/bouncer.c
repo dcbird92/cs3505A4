@@ -136,22 +136,33 @@ int main(int argc, char *argv[])
 			   
 
     }
-  // AVCodec* avcodec_find_encoder_by_name(AV_CODEC_ID_SPFF);
 
+  // Get the encoder for spff
   AVCodec *spffCodec = avcodec_find_encoder_by_name(AV_CODEC_ID_SPFF);
   if(!spffCodec)
     return -1;
   
+  // create a codec context spff
   AVCodecContext *spffContext = avcodec_alloc_context3(spffCodec);
   if(!spffContext)
     return -1;
+
+  // give the values from the AVFrame to the codec context
   spffContext->pix_fmt = vFrameRGB->pix_fmt;
   spffContext->height = vFrameRGB->height;
   spffContext->width = vFrameRGB->width;
 
+  // get the encoder from frame
   avcodec_send_frame(spffContext, vFrameRGB);
 
+
+  // get a packet from spff and place it in imgPack
   avcodec_recieve_packet(spffContext, &imgPack);
+
+  //av packet dump
+  //av_pkt_dump2(FILE f, const AVPacket* pkt, int dump payload (dont matter = 0),Const AVStream* st)
+  // file stream point where the dump should be sent to
+  // st AVStream the packet belongs to
 
   
   /* 
