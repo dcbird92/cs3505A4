@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
       
       //fill frame with info from copy frame (had to change info to RGB24
       //this is the non-deprecated version of avpicture_fill().
-      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1); 
+      // av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1); 
       
       //READING THE DATA
 
@@ -169,22 +169,37 @@ int main(int argc, char *argv[])
 						 NULL,
 						 NULL
 						 );
+
+      //fill frame with info from copy frame (had to change info to RGB24
+      //this is the non-deprecated version of avpicture_fill().
+      
+      // av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, vFrameRGB->width, vFrameRGB->height,1); 
+      
+      
       
       av_read_frame(inContext, &imgPack);
-      
       //Decode video frame
       avcodec_send_packet(imgCodex,&imgPack);
       avcodec_receive_frame(imgCodex,vFrame);
 
-      //printf(vFrame->data[0]);
+      vFrameRGB->height = imgCodex->height;
+      vFrameRGB->width = imgCodex->width;
+      vFrameRGB->format = AV_PIX_FMT_RGB24;
+
+      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1); 
+
+      //printf(vFrame->data[0])
+      /*
       printf("%p \n", vFrame->linesize);
       printf("%d \n", imgCodex->height);
       printf("%p \n", vFrameRGB->linesize);
-
+      printf("%d \n", vFrame->height);
+      */
+      
       //Convert Image from its native format to RGB
       sws_scale(swsCtx,(uint8_t const * const *)vFrame->data,vFrame->linesize,0,imgCodex->height,
 		vFrameRGB->data, vFrameRGB->linesize);	
-
+      
       // Get the encoder for spff
       AVCodec *spffCodec = avcodec_find_encoder(AV_CODEC_ID_SPFF);
       if(!spffCodec)
@@ -209,12 +224,15 @@ int main(int argc, char *argv[])
       avcodec_send_frame(spffContext, vFrameRGB);
 
       // get a packet from spff and place it in imgPack
-      if(avcodec_receive_packet(spffContext, &imgPack) != 0)
+      int ret;
+      ret = avcodec_receive_packet(spffContext, &imgPack);
+      /* if(avcodec_receive_packet(spffContext, &imgPack) != 0)
 	{
 	  printf("Could not find the packet");
 	  return -1;
 	}
-
+      */
+      printf("%d \n",ret);
       //av packet dump
       file = fopen("frame%d.spff", "wb");
       fwrite(imgPack.data, 1, imgPack.size, file);
