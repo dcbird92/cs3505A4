@@ -6,6 +6,8 @@
 #include <libavutil/imgutils.h>
 
 
+//Error - maybe from 32 bits per line?
+
 //*************************************************
 //this is copied from the tutorial
 /*
@@ -17,7 +19,7 @@ void saveFrame(AVFrame *vFrame, int width, int height, int iFrame)
 
   //open file
   sprintf(sizeFile, "frame%d.spff", iFrame);
-  imgFILE = fopen(sizeFile, "spff");
+  imgFILE = fopen(sizeFile, "wb");
   if(imgFILE==NULL)
     return;
 
@@ -32,8 +34,8 @@ void saveFrame(AVFrame *vFrame, int width, int height, int iFrame)
   fclose(imgFILE);
 
 }
-
 */
+
 void DrawBall()
 {
   
@@ -41,6 +43,7 @@ void DrawBall()
 
 int main(int argc, char *argv[])
 {
+  //Initialize these to Null prevents segfaults
   AVPacket imgPack;
   AVFormatContext *inContext = NULL;
   AVCodecContext *imgCodex = NULL;
@@ -86,9 +89,9 @@ int main(int argc, char *argv[])
 	    }
 	}
       
-      if(videoStream==-1)
+      if(videoStream == -1)
 	{
-	  printf("Didn not find a video stream");
+	  printf("Didnt not find a video stream");
 	  return -1;
 	}
 
@@ -102,7 +105,7 @@ int main(int argc, char *argv[])
 	  printf("Could not get codexContext from parameters");
 	  return -1;
 	}
-      
+
       //find the decoder for the video stream
       vCodec = avcodec_find_decoder(imgCodex->codec_id);
       if(vCodec->id != AV_CODEC_ID_MJPEG)
@@ -139,10 +142,17 @@ int main(int argc, char *argv[])
 
       //STORING THE DATA
 
-      //make and allocate memory for frame
-      vFrame = av_frame_alloc();
-           
+      //make and allocate memory for frames
+      vFrame = av_frame_alloc();          
       vFrameRGB = av_frame_alloc();
+
+      //av_image_alloc 
+      av_image_alloc(vFrame->data, vFrame->linesize, imgCodex->width, imgCodex->height,
+		     imgCodex->pix_fmt, 16);
+
+      av_image_alloc(vFrameRGB->data, vFrameRGB->linesize, imgCodex->width, imgCodex->height,
+		     imgCodex->pix_fmt, 16);
+      
 
       //make the buffer to store data from frame into
       uint8_t *buffer = NULL;
@@ -150,11 +160,22 @@ int main(int argc, char *argv[])
       //Determine required buffer size and allocate buffer
       numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1);
       buffer = (uint8_t *)av_malloc(numBytes*sizeof(uint8_t));
-      
+
       //fill frame with info from copy frame (had to change info to RGB24
       //this is the non-deprecated version of avpicture_fill().
-      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1); 
+      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1);
+
+
+      printf("After fill arrays information\n");
+      printf("vFrameRGB data = %u \n",*vFrameRGB->data);
+      printf("vFrameRGB linesize = %d \n",*vFrameRGB->linesize);
+      printf("vFrameRGB width  = %d \n",vFrameRGB->height);
+      printf("vFrameRGB height  = %d \n",vFrameRGB->width);
+      printf("buffer = %u \n",buffer);
+      printf("imgCodex width= %d \n", imgCodex->width);
+      printf("imgCodex height= %d \n", imgCodex->height);
       
+
       //READING THE DATA
 
       //copy original context into another frame
@@ -169,21 +190,35 @@ int main(int argc, char *argv[])
 						 NULL,
 						 NULL
 						 );
-      
-      av_read_frame(inContext, &imgPack);
-      
+     
+      if(av_read_frame(inContext, &imgPack) != 0)
+	{
+	  //error
+	  return -1;
+	}
+
       //Decode video frame
       avcodec_send_packet(imgCodex,&imgPack);
       avcodec_receive_frame(imgCodex,vFrame);
+	  
+      //Convert Image from its native format to RGB
+      sws_scale(swsCtx,(uint8_t const * const *)vFrame->data,
+		vFrame->linesize,0,imgCodex->height,
+		vFrameRGB->data, vFrameRGB->linesize);	
+	  
+      
+      
+      //Copy to another frame after conversion, then draw, then encode, and then save
 
       //printf(vFrame->data[0]);
       printf("%p \n", vFrame->linesize);
       printf("%d \n", imgCodex->height);
       printf("%p \n", vFrameRGB->linesize);
+      printf("%d \n", vFrameRGB->height);
 
-      //Convert Image from its native format to RGB
-      sws_scale(swsCtx,(uint8_t const * const *)vFrame->data,vFrame->linesize,0,imgCodex->height,
-		vFrameRGB->data, vFrameRGB->linesize);	
+
+      //allocate data for packet
+      AVPacket *spffPkt = av_packet_alloc();
 
       // Get the encoder for spff
       AVCodec *spffCodec = avcodec_find_encoder(AV_CODEC_ID_SPFF);
@@ -196,33 +231,36 @@ int main(int argc, char *argv[])
 	return -1;
 
       //initiallize packet
-      av_init_packet(&imgPack);
-      imgPack.data = NULL;
-      imgPack.size = 0;
+      // av_packet_alloc();
+      //      av_init_packet(&imgPack);
+      // imgPack.data = NULL;
+      // imgPack.size = 0;
       
       // give the values from the AVFrame to the codec context
       spffContext->pix_fmt = vFrameRGB->format;
       spffContext->height = vFrameRGB->height;
       spffContext->width = vFrameRGB->width;
-  
+
+      printf("spffContext height = %d \n", spffContext->height);
       // get the encoder from frame
       avcodec_send_frame(spffContext, vFrameRGB);
 
       // get a packet from spff and place it in imgPack
-      if(avcodec_receive_packet(spffContext, &imgPack) != 0)
+      if(avcodec_receive_packet(spffContext, spffPkt) != 0)
 	{
-	  printf("Could not find the packet");
+	  printf("Could not find the packet \n");
 	  return -1;
 	}
 
       //av packet dump
       file = fopen("frame%d.spff", "wb");
-      fwrite(imgPack.data, 1, imgPack.size, file);
+      fwrite(spffPkt->data, 1, spffPkt->size, file);
 
   //av_pkt_dump2(FILE f, const AVPacket* pkt, int dump payload (dont matter = 0),Const AVStream* st)
   // file stream point where the dump should be sent to
   // st AVStream the packet belongs to
 
+      //Free the packet that was allocated by av_read_frame
   
       //Free the RGB image
       av_free(buffer);
@@ -235,6 +273,7 @@ int main(int argc, char *argv[])
       avcodec_close(imgCodex);
       avcodec_close(spffContext);
       
+
       //Close the video file
       avformat_close_input(&inContext);
     }
