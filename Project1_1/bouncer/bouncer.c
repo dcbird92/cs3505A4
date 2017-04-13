@@ -163,18 +163,12 @@ int main(int argc, char *argv[])
 
       //fill frame with info from copy frame (had to change info to RGB24
       //this is the non-deprecated version of avpicture_fill().
-      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1);
 
-
-      printf("After fill arrays information\n");
-      printf("vFrameRGB data = %u \n",*vFrameRGB->data);
-      printf("vFrameRGB linesize = %d \n",*vFrameRGB->linesize);
-      printf("vFrameRGB width  = %d \n",vFrameRGB->height);
-      printf("vFrameRGB height  = %d \n",vFrameRGB->width);
-      printf("buffer = %u \n",buffer);
-      printf("imgCodex width= %d \n", imgCodex->width);
-      printf("imgCodex height= %d \n", imgCodex->height);
+      vFrameRGB->height = imgCodex->height;
+      vFrameRGB->width = imgCodex->width;
+      vFrameRGB->format = AV_PIX_FMT_RGB24;
       
+      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1);
 
       //READING THE DATA
 
@@ -210,15 +204,14 @@ int main(int argc, char *argv[])
       
       //Copy to another frame after conversion, then draw, then encode, and then save
 
-      //printf(vFrame->data[0]);
-      printf("%p \n", vFrame->linesize);
-      printf("%d \n", imgCodex->height);
-      printf("%p \n", vFrameRGB->linesize);
-      printf("%d \n", vFrameRGB->height);
-
 
       //allocate data for packet
       AVPacket *spffPkt = av_packet_alloc();
+      
+      //initiallize packet
+      av_init_packet(spffPkt);
+      spffPkt->data = NULL;
+      spffPkt->size = 0;
 
       // Get the encoder for spff
       AVCodec *spffCodec = avcodec_find_encoder(AV_CODEC_ID_SPFF);
@@ -229,29 +222,39 @@ int main(int argc, char *argv[])
       AVCodecContext *spffContext = avcodec_alloc_context3(spffCodec);
       if(!spffContext)
 	return -1;
-
-      //initiallize packet
-      // av_packet_alloc();
-      //      av_init_packet(&imgPack);
-      // imgPack.data = NULL;
-      // imgPack.size = 0;
       
       // give the values from the AVFrame to the codec context
       spffContext->pix_fmt = vFrameRGB->format;
       spffContext->height = vFrameRGB->height;
       spffContext->width = vFrameRGB->width;
+      spffContext->time_base = (AVRational){1,30};
 
-      printf("spffContext height = %d \n", spffContext->height);
+      printf("here? \n");
+      //avcodec_open2 does not support AV_PIX_FMT_RGB24..?
+      if(avcodec_open2(spffContext, spffCodec, NULL) < 0)
+	{
+	  printf("Could not open codec \n");
+	  return -1;
+	}
+
+
       // get the encoder from frame
-      avcodec_send_frame(spffContext, vFrameRGB);
+      if(avcodec_send_frame(spffContext, vFrameRGB)!=0)
+	{
+	  printf("Could not send the frame \n");
+	  return -1;
+	}
 
+      printf("here? \n");
       // get a packet from spff and place it in imgPack
       if(avcodec_receive_packet(spffContext, spffPkt) != 0)
 	{
+	  
 	  printf("Could not find the packet \n");
 	  return -1;
 	}
 
+      printf("here? \n");
       //av packet dump
       file = fopen("frame%d.spff", "wb");
       fwrite(spffPkt->data, 1, spffPkt->size, file);
