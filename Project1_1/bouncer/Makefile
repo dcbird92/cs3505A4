@@ -21,12 +21,10 @@ decoding_encoding: LDLIBS += -lm
 muxing:            LDLIBS += -lm
 resampling_audio:  LDLIBS += -lm
 
-.phony: all clean-test clean
-
 all: $(OBJS) $(EXAMPLES)
 
-clean-test:
-	$(RM) test*.pgm test.h264 test.mp2 test.sw test.mpg
+clean:
+	rm -f *.o bouncer *.spff *.mp4 *.mpg
 
-clean: clean-test
-	$(RM) $(EXAMPLES) $(OBJS)
+movie:
+	ffmpeg -framerate 30 -i frame%03d.spff ballBounce.mp4

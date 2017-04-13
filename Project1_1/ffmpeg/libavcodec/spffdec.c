@@ -1,29 +1,9 @@
 /*
- * Michael Sorger and Sean Hammond
- * SPFF image format decoder
- * Copyright (c) 2005 Mans Rullgard
- *
- * This file is part of FFmpeg.
- *
- * FFmpeg is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * FFmpeg is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with FFmpeg; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * Peter's codec decoder.
  */
 
-#include <inttypes.h>
 #include "avcodec.h"
 #include "bytestream.h"
-#include "spff.h"
 #include "internal.h"
 #include "msrledec.h"
 
@@ -31,140 +11,102 @@ static int spff_decode_frame(AVCodecContext *avctx,
                             void *data, int *got_frame,
                             AVPacket *avpkt)
 {
-    const uint8_t *avpktBufPtr = avpkt->data; //int buffer that points to avpktdata
-    int buf_size  = avpkt->size; //size of packet data
-    AVFrame *framePointer = data; //points to frame data
-    unsigned int fileSize, headerSize;
-    int width, height; //width and height of image
-    unsigned int depth; //the '8' in RGB8 
+    // Input variables.
 
-    unsigned int infoHeaderSize;
-    int i, n, linesize, retInt; 
-    uint8_t *smallUIntPointer;
-    const uint8_t *bufPtrCopy = avpktBufPtr;
+    const uint8_t *input_data;
+    int            input_data_size;
 
-    static int beenHere = 0;
+    // Output variables.
+    
+    AVFrame *pic;
+    int result;
 
-    //size packet is too small
-    if (buf_size < 14) 
-      {
-        av_log(avctx, AV_LOG_ERROR, "buf size too small (%d)\n", buf_size);
-        return AVERROR_INVALIDDATA;
-      }
+    // Loop variables.
 
-    //if beginning of buffer does not have these
-    if (bytestream_get_byte(&avpktBufPtr) != 'S' ||
-        bytestream_get_byte(&avpktBufPtr) != 'P' ||
-	bytestream_get_byte(&avpktBufPtr) != 'F' ||
-	bytestream_get_byte(&avpktBufPtr) != 'F')
-      {
-        av_log(avctx, AV_LOG_ERROR, "bad magic number\n");
-        return AVERROR_INVALIDDATA;
-      }
+    int x, y, b;
 
-    //assigns file size to be info given from buffer, checks if all buffer info exists
-    fileSize = bytestream_get_le32(&avpktBufPtr);
-    if (buf_size < fileSize)
-      {
-        av_log(avctx, AV_LOG_ERROR, "not enough data (%d < %u), trying to decode anyway\n",
-               buf_size, fileSize);
-        fileSize = buf_size;;
-      }
+    // Debugging variables.
+    
+    static int reported = 0;
 
-    //assigns header/info size to be information of buffer and checks to see if theres a difference
-    headerSize  = bytestream_get_le32(&avpktBufPtr); /* header size */
-    infoHeaderSize = bytestream_get_le32(&avpktBufPtr); /* more header size */
-    if (infoHeaderSize + 14LL > headerSize) 
-      {
-        av_log(avctx, AV_LOG_ERROR, "invalid header size %u\n", headerSize);
-        return AVERROR_INVALIDDATA;
-      }
-
-    /* sometimes file size is set to some headers size, set a real size in that case */
-    if (fileSize == 14 || fileSize == infoHeaderSize + 14)
-        fileSize = buf_size - 2;
-
-    if (fileSize <= headerSize)
-      {
-        av_log(avctx, AV_LOG_ERROR,
-               "Declared file size is less than header size (%u < %u)\n",
-               fileSize, headerSize);
-        return AVERROR_INVALIDDATA;
-      }
-
-    //set AVCodecContext pixel format to be RGB8 
-    avctx->pix_fmt = AV_PIX_FMT_RGB8;
-
-    //infoHeaderSize = 40
-    width  = bytestream_get_le32(&avpktBufPtr);
-    height = bytestream_get_le32(&avpktBufPtr);
-
-
-    /* planes */
-    if (bytestream_get_le16(&avpktBufPtr) != 1) {
-        av_log(avctx, AV_LOG_ERROR, "invalid SPFF header\n");
-        return AVERROR_INVALIDDATA;
+    // Debugging message.
+    
+    if (!reported)
+    {
+      av_log(avctx, AV_LOG_INFO, "*** CS 3505:  Executing in spffdec.c\n");
+      av_log(avctx, AV_LOG_INFO, "*** CS 3505:  Codec by Peter Jensen ***\n");
+      reported = 1;
     }
 
-    depth = bytestream_get_le16(&avpktBufPtr); //8
+    // Check input data for validity, extract image dimensions.
+    
+    input_data = avpkt->data;
+    input_data_size = avpkt->size;
 
-    //set height and width of picture
-    avctx->width  = width;
-    avctx->height = height > 0 ? height : -height;
+    if (input_data_size < 12)
+    {
+      av_log(avctx, AV_LOG_ERROR, "File is too short\n");
+      return AVERROR_INVALIDDATA;	
+    }          
+    
+    if (bytestream_get_byte(&input_data) != 's' ||
+	bytestream_get_byte(&input_data) != 'p' ||
+	bytestream_get_byte(&input_data) != 'f' ||
+	bytestream_get_byte(&input_data) != 'f')
+    {
+      av_log(avctx, AV_LOG_ERROR, "Corrupt SPFF file\n");
+      return AVERROR_INVALIDDATA;
+	
+    }
+    
+    bytestream_get_byte(&input_data);  // Ignore meaningless byte
 
-    //check if the picture's buffer is less than 0
-    if ((retInt = ff_get_buffer(avctx, framePointer, 0)) < 0)
-        return retInt;
+    avctx->width   = bytestream_get_le32(&input_data);
+    avctx->height  =  bytestream_get_be32(&input_data);
+    avctx->pix_fmt = AV_PIX_FMT_RGB24;
+    
+    if (input_data_size < 12 + avctx->width * avctx->height * 3  )
+    {
+      av_log(avctx, AV_LOG_ERROR, "File is too short\n");
+      return AVERROR_INVALIDDATA;	
+    } 
+    
+    // Create output picure buffer of size specified in the context
 
-    //dereference frame's attributes to assign 
-    framePointer->pict_type = AV_PICTURE_TYPE_I;
-    framePointer->key_frame = 1;
+    pic = data;
+    result = ff_get_buffer(avctx, pic, 0);
+    
+    if (result < 0)
+        return result;
 
-    //assign bufferPointer to be bufferPointerCopy + headerSize
-    avpktBufPtr = bufPtrCopy + headerSize;
 
-    //assign n to be bytes per row
-    n = ((avctx->width * depth + 31) / 8) & ~3;
+    /* Cite: bmp  Again, I'm unsure of these settings, but it appears to
+       indicate that it's an image and a key frame.  */
+    
+    pic->pict_type = AV_PICTURE_TYPE_I; 
+    pic->key_frame = 1;
 
-    //assignt small Pointer to start at last row of image
-    if (height > 0) 
-      {
-        smallUIntPointer = framePointer->data[0] + (avctx->height - 1) * framePointer->linesize[0];
-        linesize = -framePointer->linesize[0];
-      } 
-    //otherwise, it is the last row, start there
-    else 
-      {
-        smallUIntPointer = framePointer->data[0];
-        linesize = framePointer->linesize[0];
-      }
+    /* End */
+    
+    // Set pixel data
 
-    //copy each line into memory
-    for (i = 0; i < avctx->height; i++)
-      {
-	memcpy(smallUIntPointer, avpktBufPtr, n);
-	avpktBufPtr += n;
-	smallUIntPointer += linesize;
-      }
-
-    //was spffdec.c ran?
-    if(!beenHere)
-      {
-	av_log(avctx,AV_LOG_ERROR, "*** CS 3505:  Executing in %s and %s\n",__FUNCTION__,__FILE__);
-	av_log(avctx, AV_LOG_ERROR, "*** CS 3505:  Modified by Michael Sorger and Sean Hammond ***\n");
-	beenHere = 1;
-      }
-
+    for (y = 0; y < avctx->height; y++)
+      for (x = 0; x < avctx->width; x++)
+	for (b = 0; b < 3; b++)
+          pic->data[0][y*pic->linesize[0]+x*3 + b] = bytestream_get_byte(&input_data);
+    
+    // Indicate that we decoded a frame and return how many bytes we consumed.
+    
     *got_frame = 1;
 
-    return buf_size;
+    return input_data_size;
 }
 
 AVCodec ff_spff_decoder = {
     .name           = "spff",
-    .long_name      = NULL_IF_CONFIG_SMALL("SPFF (Project for CS 3505)"),
+    .long_name      = NULL_IF_CONFIG_SMALL("Peter's spff decoder"),
     .type           = AVMEDIA_TYPE_VIDEO,
     .id             = AV_CODEC_ID_SPFF,
     .decode         = spff_decode_frame,
-    .capabilities   = AV_CODEC_CAP_DR1,
+    .capabilities   = CODEC_CAP_DR1,
 };

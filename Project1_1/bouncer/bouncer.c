@@ -36,10 +36,56 @@ void saveFrame(AVFrame *vFrame, int width, int height, int iFrame)
 }
 */
 
-void DrawBall()
+
+      /*
+      int x;
+      int y;
+      int ls0 = vFrameRGB->linesize[0];
+      
+      printf("ls0 = %d \n", ls0);
+      printf("vFrameRGB width = %d \n", vFrameRGB->width);
+      printf("vFrameRGB height = %d \n", vFrameRGB->height);
+
+      //Draw Rectangle
+      for(y = 0; y < vFrameRGB->height ; y++)
+	{
+	  for(x = 0; x <vFrameRGB->width ; x++)
+	    {
+	      if(x > 150 && x < 200 && y > 500 && y < 550)
+		{
+		  vFrameRGB->data[0][ls0*y+x*3+0] = 0x22; //R
+		  vFrameRGB->data[0][ls0*y+x*3+1] = 0x44; //G
+		  vFrameRGB->data[0][ls0*y+x*3+2] = 0x88; //B
+		}
+	    }
+	
+} reference for drawBall
+      */
+
+
+void DrawBall(uint8_t* data, int lineSize, int width, int height, int centerX, int centerY, int radius, int color)
 {
-  
+  int x, y;
+  int r = (color >> 16) & 255; //gives the R value from colorRGB 0xRGB
+  int g = (color >> 8) & 255;  //gives the G value from colorRGB 0xRGB
+  int b = (color >> 0) & 255;  //gives the B value from colorRGB 0xRGB
+  for(y = 0; y < height ; y++)
+    {
+      for(x = 0; x < width ; x++)
+	{
+	  int dx = centerX - x;
+	  int dy = centerY - y;
+	  int dist = dx*dx + dy*dy;
+	  if(dist < radius*radius)
+	    {
+	      data[lineSize*y+x*3+0] = r; //R
+	      data[lineSize*y+x*3+1] = g; //G
+	      data[lineSize*y+x*3+2] = b; //B
+	    }
+	}
+    }
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -195,79 +241,137 @@ int main(int argc, char *argv[])
       //Decode video frame
       avcodec_send_packet(imgCodex,&imgPack);
       avcodec_receive_frame(imgCodex,vFrame);
-	  
-      //Convert Image from its native format to RGB
-      sws_scale(swsCtx,(uint8_t const * const *)vFrame->data,
-		vFrame->linesize,0,imgCodex->height,
-		vFrameRGB->data, vFrameRGB->linesize);	
-
-	  
-      
-      
-      //Copy to another frame after conversion, then draw, then encode, and then save
 
 
-      //allocate data for packet
-      AVPacket *spffPkt = av_packet_alloc();
-      
-      //initiallize packet
-      av_init_packet(spffPkt);
-      spffPkt->data = NULL;
-      spffPkt->size = 0;
-
-      // Get the encoder for spff
-      AVCodec *spffCodec = avcodec_find_encoder(AV_CODEC_ID_SPFF);
-      if(!spffCodec)
-	return -1;
-      
-      // create a codec context spff
-      AVCodecContext *spffContext = avcodec_alloc_context3(spffCodec);
-      if(!spffContext)
-	return -1;
-      
-      // give the values from the AVFrame to the codec context
-      spffContext->pix_fmt = vFrameRGB->format;
-      spffContext->height = vFrameRGB->height;
-      spffContext->width = vFrameRGB->width;
-      spffContext->time_base = (AVRational){1,30};
-
-      printf("here? \n");
-      //avcodec_open2 does not support AV_PIX_FMT_RGB24..?
-      if(avcodec_open2(spffContext, spffCodec, NULL) < 0)
+      float ballPx = 75;
+      float ballPy = 325;
+      int ballR = 25;
+      int ballX = 75;
+      int ballY = 325;
+      float ballVx = 2.25f;
+      float ballVy = -8.0f;
+      float ballAy = .18f;    //pixels/(frame*frame) 10 meters = 750 pixels 30 frames = 1 second = 75/900 
+      int motion = 1;    //0 for linear 1 for euler
+      //RENDER
+      int renFrame;
+      for(renFrame = 1; renFrame <= 300; renFrame++)
 	{
-	  printf("Could not open codec \n");
-	  return -1;
-	}
+	  printf("%d %f %f \n", renFrame, ballPx, ballPy);
 
-
-      // get the encoder from frame
-      if(avcodec_send_frame(spffContext, vFrameRGB)!=0)
-	{
-	  printf("Could not send the frame \n");
-	  return -1;
-	}
-
-      printf("here? \n");
-      // get a packet from spff and place it in imgPack
-
-      if(avcodec_receive_packet(spffContext, spffPkt) != 0)
-	{
+	  if(motion == 0)
+	    {
+	      //move the ball linearly
+	      ballX+=2;
+	      if(renFrame < 150)
+		{
+		  ballY+=-1;
+		}
+	      else
+		{
+		  ballY+=1;
+		} 
+	    }
 	  
-	  printf("Could not find the packet \n");
-	  return -1;
-	}
+	  else if(motion == 1)
+	    {
+	      //euler
+	      ballVy+=ballAy;
+	      ballPx+=ballVx; ballPy+=ballVy;
+	      ballX = (int)ballPx; ballY = (int)ballPy; //convert to screen coordinates
 
-      printf("here? \n");
-      //av packet dump
-      file = fopen("frame%d.spff", "wb");
-      fwrite(spffPkt->data, 1, spffPkt->size, file);
+	      //detect
+	      if(ballPy > vFrame->height*.8 && ballVy > 0)
+		{
+		  //respond - flip velocity
+		  ballVy = -ballVy;
+		  ballPy = vFrame->height*.8;
+		}
+
+	    }
+
+
+	  //draw original image into buffer
+	  //thereby erasing the ball
+	  //Convert Image from its native format to RGB
+	  sws_scale(swsCtx,(uint8_t const * const *)vFrame->data,
+		    vFrame->linesize,0,imgCodex->height,
+		    vFrameRGB->data, vFrameRGB->linesize);	
+	   
+	  //then draw,
+	  //drawball at new position
+	  DrawBall(vFrameRGB->data[0], vFrameRGB->linesize[0], vFrameRGB->width, vFrameRGB->height, ballX, ballY, ballR, 0x654321); //RGB
+      
+         
+	  //then encode, 
+	  //allocate data for packet
+	  AVPacket *spffPkt = av_packet_alloc();
+      
+	  //initiallize packet
+	  av_init_packet(spffPkt);
+	  spffPkt->data = NULL;
+	  spffPkt->size = 0;
+	  
+	  // Get the encoder for spff
+	  AVCodec *spffCodec = avcodec_find_encoder(AV_CODEC_ID_SPFF);
+	  if(!spffCodec)
+	    return -1;
+      
+	  // create a codec context spff
+	  AVCodecContext *spffContext = avcodec_alloc_context3(spffCodec);
+	  if(!spffContext)
+	    return -1;
+      
+	  // give the values from the AVFrame to the codec context
+	  spffContext->pix_fmt = AV_PIX_FMT_RGB24; //vFrameRGB->format;
+	  spffContext->height = vFrameRGB->height;
+	  spffContext->width = vFrameRGB->width;
+	  spffContext->time_base = (AVRational){1,30};
+	  
+	  //avcodec_open2 does not support AV_PIX_FMT_RGB24..?
+	  if(avcodec_open2(spffContext, spffCodec, NULL) < 0)
+	    {
+	      printf("Could not open codec \n");
+	      return -1;
+	    }
+
+
+	  // get the encoder from frame
+	  if(avcodec_send_frame(spffContext, vFrameRGB)!=0)
+	    {
+	      printf("Could not send the frame \n");
+	      return -1;
+	    }
+
+	  // get a packet from spff and place it in imgPack
+	  if(avcodec_receive_packet(spffContext, spffPkt) != 0)
+	    {
+	      
+	      printf("Could not find the packet \n");
+	      return -1;
+	    }
+	  
+	  //and then save
+	  //av packet dump
+	  char fileName[80];
+	  sprintf(fileName,"frame%03d.spff",renFrame); //3d is always 3 digits long, starting with 001,002,003,004,...300
+	  file = fopen(fileName, "wb");
+	  fwrite(spffPkt->data, 1, spffPkt->size, file);
+	  
+	  //Since we made it in for loop, have to free it in loop, made every frame, free everry frame
+	  av_packet_unref(spffPkt);
+
+	  //Make/remake context, not sure
+	  avcodec_close(spffContext);
+	}
+     
 
   //av_pkt_dump2(FILE f, const AVPacket* pkt, int dump payload (dont matter = 0),Const AVStream* st)
   // file stream point where the dump should be sent to
   // st AVStream the packet belongs to
 
       //Free the packet that was allocated by av_read_frame
-  
+      av_packet_unref((struct AVPacket*)&imgPack);
+      
       //Free the RGB image
       av_free(buffer);
       av_free(vFrameRGB);
@@ -277,7 +381,6 @@ int main(int argc, char *argv[])
 
       //Close the codecs
       avcodec_close(imgCodex);
-      avcodec_close(spffContext);
       
 
       //Close the video file
