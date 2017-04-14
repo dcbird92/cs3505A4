@@ -13,9 +13,30 @@ void DrawBall(uint8_t* data, int lineSize, int width, int height, int centerX, i
   int g = (color >> 8) & 255;  //gives the G value from colorRGB 0xRGB
   int b = (color >> 0) & 255;  //gives the B value from colorRGB 0xRGB
 
+  int minX = centerX-radius;
+  if(minX < 0)
+    minX = 0;
+  
+  int minY = centerY-radius;
+  if(minY < 0)
+    minY = 0;
+
+  int maxX = centerX+radius;
+  if(maxX > width - 1)
+    maxX = width - 1;
+
+  int maxY = centerY+radius;
+  if(maxY > height - 1)
+    maxY = height - 1;
+  /*
+    works but slow < 
   for(y = 0; y < height ; y++)
     {
       for(x = 0; x < width ; x++)
+  */
+  for(y = minY ; y <= maxY ; y++)
+    {
+      for(x = minX ; x <= maxX ; x++)
 	{
 	  int dx = centerX - x;
 	  int dy = centerY - y;
@@ -34,6 +55,7 @@ void DrawBall(uint8_t* data, int lineSize, int width, int height, int centerX, i
 	    }
 	}
     }
+
 }
 
 
