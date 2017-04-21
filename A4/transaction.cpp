@@ -149,6 +149,7 @@ void transaction::getTransactions(std::string file)
   typedef std::map< std::string, food_item >::iterator food_iterator;
   typedef std::map<std::string,int>::iterator count_iterator;
   typedef std::set<std::string>::iterator set_iterator;
+  typedef std::map<std::string, int >:: iterator reqit_iterator;
 
   std::set<std::string>unstocked;
 
@@ -200,6 +201,53 @@ void transaction::getTransactions(std::string file)
       food_iterator foodit = foodList.find(*setit);
       std::cout << foodit->second.getUPC() << " " << foodit->second.getName() << std::endl;
     }
+
+  // RequestCount <UPC, Times requested>
+  std::cout << "Most popular products" << std::endl;
+  int min = 0;
+  int mid = 0;
+  int max = 0;
+  int temp;
+  string tempX;
+  string minX,midX,maxX;
+  for( reqit_iterator request = requestCount.begin(); request != requestCount.end(); ++request )
+    {
+      if(request->second > min)
+	{
+
+	 if(request->second > mid)
+	    {
+
+	      
+	      if(request->second > max)
+	      {
+		temp = mid;
+		tempX = midX;
+		min = temp;
+		minX = tempX;
+		midX = maxX;
+		mid = max;
+		max = request->second;
+		maxX = request->first;
+		break;
+	      }
+	      
+	      temp = mid;
+	      tempX = midX;
+	      min = temp;
+	      minX = tempX;
+	      mid = request->second;
+	      midX = request->first;
+	      break;
+	    }
+	 min = request->second;
+	 minX = request->first;
+	}
+     }
+  std::cout << "1. " << maxX << ": " << max << std::endl;
+  std::cout << "2. " << midX << ": " << mid << std::endl;
+  std::cout << "3. " << minX << ": " << min << std::endl;
+
  
  
 }

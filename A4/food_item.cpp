@@ -43,7 +43,7 @@ int food_item::getTotal()const
   {
     return quantity;
   }
-.// Changed the amount in the food item
+// Changed the amount in the food item
 void food_item::changeQuantity(int foodNum)
 {
   this->quantity = foodNum;
