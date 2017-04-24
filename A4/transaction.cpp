@@ -116,7 +116,7 @@ void transaction::getTransactions(std::string file)
 	  wareit->second.request(subFood);
 	  // calls the request method inside the warehouse
 	  std::map<std::string,int>::iterator reqit = requestCount.find(subFood.getUPC());
-	  reqit->second = reqit->second + 1;
+	  reqit->second = reqit->second + quantity;
 	 }
 
       //first words are next day
@@ -201,6 +201,7 @@ void transaction::getTransactions(std::string file)
       food_iterator foodit = foodList.find(*setit);
       std::cout << foodit->second.getUPC() << " " << foodit->second.getName() << std::endl;
     }
+  std:: cout << "\n" << std::endl;
 
   // RequestCount <UPC, Times requested>
   std::cout << "Most popular products" << std::endl;
@@ -208,8 +209,8 @@ void transaction::getTransactions(std::string file)
   int mid = 0;
   int max = 0;
   int temp;
-  string tempX;
-  string minX,midX,maxX;
+  std::string tempX;
+  std::string minX,midX,maxX;
   for( reqit_iterator request = requestCount.begin(); request != requestCount.end(); ++request )
     {
       if(request->second > min)
@@ -229,7 +230,7 @@ void transaction::getTransactions(std::string file)
 		mid = max;
 		max = request->second;
 		maxX = request->first;
-		break;
+		continue;
 	      }
 	      
 	      temp = mid;
@@ -238,17 +239,27 @@ void transaction::getTransactions(std::string file)
 	      minX = tempX;
 	      mid = request->second;
 	      midX = request->first;
-	      break;
+	      continue;
 	    }
 	 min = request->second;
 	 minX = request->first;
 	}
-     }
-  std::cout << "1. " << maxX << ": " << max << std::endl;
-  std::cout << "2. " << midX << ": " << mid << std::endl;
-  std::cout << "3. " << minX << ": " << min << std::endl;
-
- 
+    }
+  
+  food_iterator requestName;
+  requestName = foodList.find(maxX);
+  if(requestName != foodList.end())
+    {
+      std::cout << maxX << " "  << requestName->second.getName() << ": " << max << std::endl;
+      requestName = foodList.find(midX);
+      if(requestName != foodList.end())
+	{
+	  std::cout << midX  << " " << requestName->second.getName() << ": " << mid << std::endl;
+	  requestName = foodList.find(minX);
+	   if(requestName != foodList.end())
+	     std::cout << minX  << " " << requestName->second.getName() << ": " << min << std::endl;
+	}
+    }
  
 }
 
