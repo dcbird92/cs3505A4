@@ -6,84 +6,56 @@
 #include <libavutil/imgutils.h>
 
 
-//Error - maybe from 32 bits per line?
-
-//*************************************************
-//this is copied from the tutorial
-/*
-void saveFrame(AVFrame *vFrame, int width, int height, int iFrame)
-{
-  FILE *imgFILE;
-  char sizeFile[32];
-  int i;
-
-  //open file
-  sprintf(sizeFile, "frame%d.spff", iFrame);
-  imgFILE = fopen(sizeFile, "wb");
-  if(imgFILE==NULL)
-    return;
-
-  //write header
-  fprintf(imgFILE, "P6\n%d %d\n255\n", width, height);
-
-  //write pixel data
-  for(i = 0; i < height; i++)
-    fwrite(vFrame->data[0]+i*vFrame->linesize[0],1,width*3,imgFILE);
-
-  //close file
-  fclose(imgFILE);
-
-}
-*/
-
-
-      /*
-      int x;
-      int y;
-      int ls0 = vFrameRGB->linesize[0];
-      
-      printf("ls0 = %d \n", ls0);
-      printf("vFrameRGB width = %d \n", vFrameRGB->width);
-      printf("vFrameRGB height = %d \n", vFrameRGB->height);
-
-      //Draw Rectangle
-      for(y = 0; y < vFrameRGB->height ; y++)
-	{
-	  for(x = 0; x <vFrameRGB->width ; x++)
-	    {
-	      if(x > 150 && x < 200 && y > 500 && y < 550)
-		{
-		  vFrameRGB->data[0][ls0*y+x*3+0] = 0x22; //R
-		  vFrameRGB->data[0][ls0*y+x*3+1] = 0x44; //G
-		  vFrameRGB->data[0][ls0*y+x*3+2] = 0x88; //B
-		}
-	    }
-	
-} reference for drawBall
-      */
-
-
 void DrawBall(uint8_t* data, int lineSize, int width, int height, int centerX, int centerY, int radius, int color)
 {
   int x, y;
   int r = (color >> 16) & 255; //gives the R value from colorRGB 0xRGB
   int g = (color >> 8) & 255;  //gives the G value from colorRGB 0xRGB
   int b = (color >> 0) & 255;  //gives the B value from colorRGB 0xRGB
+
+  int minX = centerX-radius;
+  if(minX < 0)
+    minX = 0;
+  
+  int minY = centerY-radius;
+  if(minY < 0)
+    minY = 0;
+
+  int maxX = centerX+radius;
+  if(maxX > width - 1)
+    maxX = width - 1;
+
+  int maxY = centerY+radius;
+  if(maxY > height - 1)
+    maxY = height - 1;
+  /*
+    works but slow < 
   for(y = 0; y < height ; y++)
     {
       for(x = 0; x < width ; x++)
+  */
+  for(y = minY ; y <= maxY ; y++)
+    {
+      for(x = minX ; x <= maxX ; x++)
 	{
 	  int dx = centerX - x;
 	  int dy = centerY - y;
 	  int dist = dx*dx + dy*dy;
+	  int shade;
+	  
+	  shade = (int)sqrt(pow(x - (centerX-width/(radius*2)),2) + pow(y - (centerY-height/(radius*2)),2)) % 0xFF;
+	  
 	  if(dist < radius*radius)
 	    {
-	      data[lineSize*y+x*3+0] = r; //R
-	      data[lineSize*y+x*3+1] = g; //G
-	      data[lineSize*y+x*3+2] = b; //B
+	      data[lineSize*y+x*3+0] = r-2*shade; //R + shade
+	      data[lineSize*y+x*3+1] = g-2*shade; //G + shade
+	      data[lineSize*y+x*3+2] = b-2*shade; //B + shade?
+	      
+	      
 	    }
 	}
     }
+
 }
 
 
@@ -214,7 +186,7 @@ int main(int argc, char *argv[])
       vFrameRGB->width = imgCodex->width;
       vFrameRGB->format = AV_PIX_FMT_RGB24;
       
-      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,1);
+      av_image_fill_arrays(vFrameRGB->data,vFrameRGB->linesize, buffer, AV_PIX_FMT_RGB24, imgCodex->width, imgCodex->height,32);
 
       //READING THE DATA
 
@@ -299,7 +271,7 @@ int main(int argc, char *argv[])
 	   
 	  //then draw,
 	  //drawball at new position
-	  DrawBall(vFrameRGB->data[0], vFrameRGB->linesize[0], vFrameRGB->width, vFrameRGB->height, ballX, ballY, ballR, 0x654321); //RGB
+	  DrawBall(vFrameRGB->data[0], vFrameRGB->linesize[0], vFrameRGB->width, vFrameRGB->height, ballX, ballY, ballR, 0xFFAABB); //RGB
       
          
 	  //then encode, 
