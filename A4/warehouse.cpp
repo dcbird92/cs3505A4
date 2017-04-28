@@ -28,6 +28,7 @@ warehouse::warehouse(){}
 	foodL.push_back(stock);
 	// Adds the upc food item pair to the map in the warehouse
 	inventory.insert(std::pair<std::string,std::vector<food_item> >(stock.getUPC(),foodL));
+
       }
     else
       {
@@ -47,8 +48,8 @@ warehouse::warehouse(){}
       {
 	// total amount requested
 	int amount = sell.getTotal();
-
-	std::cout << "Requested: "<< amount << " for " << sell.getName() << " in " << name << std::endl;
+	// For printing purposed
+	//std::cout << "Requested: "<< amount << " for " << sell.getName() << " in " << name << std::endl;
 
         std::vector<food_item> &itV = it->second;
 	while(amount > 0) // if amount is less than 0 no need to do anything
@@ -92,7 +93,9 @@ warehouse::warehouse(){}
 	  {
 	    if(itV[j].getLife() == 0)
 	      {
-		std::cout << "Erased " << itV[j].getName() << " from " << name << " due to expiration: " << date << " "  <<  itV[j].getLife() << std::endl;
+		// For printing purposes
+		//std::cout << "Erased " << itV[j].getName() << " from " << name << " due to expiration: " << date << " "  <<  itV[j].getLife() << std::endl;
+
 		itV.erase(itV.begin()+j);
 		// because we removed an item from the list we place j back on position so every item of the list is looked at.
 		j = j - 1;

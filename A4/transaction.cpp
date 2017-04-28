@@ -40,11 +40,17 @@ void transaction::getTransactions(std::string file)
       if(words[0] == "FoodItem")
 	{
 	  std::string name;
+	  int count;
 	  // In the text file it the line starts with food item we know the 9th position of the line is the start of the name
-	  for (int count = 9; words[count] != words.back(); count++)
+	  for (count = 9; words[count] != words.back(); count++)
 	    {
 	      name = name + words[count] + " ";
 	    }
+	  if(count != words.size() - 1)
+	    for(count = count; count < words.size()-1; count++)
+	      {
+		 name = name + words[count] + " ";
+	      }
 	  name = name + words.back();
 	  char *y = const_cast<char *>(words[7].c_str()); //changes string to character array
 	  int shelflife = atoi(y); //converts character array to an int
@@ -211,7 +217,7 @@ void transaction::getTransactions(std::string file)
   int temp;
   std::string tempX;
   std::string minX,midX,maxX;
-  for( reqit_iterator request = requestCount.begin(); request != requestCount.end(); ++request )
+  for(reqit_iterator request = requestCount.begin(); request != requestCount.end(); ++request )
     {
       if(request->second > min)
 	{
